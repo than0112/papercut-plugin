@@ -1,0 +1,338 @@
+{
+  "schemaVersion": "1.0",
+  "sceneId": "synthetic-fixture",
+  "name": "Synthetic paper-cut fixture (procedurally drawn, not pipeline output)",
+  "mode": "layered",
+  "generator": {
+    "name": "examples/make_synthetic_fixture.py",
+    "version": "0.1.0",
+    "revision": 0
+  },
+  "source": {
+    "image": "source.png",
+    "width": 1200,
+    "height": 800,
+    "sha256": "538a65bd6b377712eab9d8e281cfc5bbbc19c317bf37535f49be17595bd500fa"
+  },
+  "units": {
+    "pixelsPerUnit": 100
+  },
+  "frame": {
+    "width": 12.0,
+    "height": 8.0
+  },
+  "camera": {
+    "type": "orthographic",
+    "position": [
+      0,
+      0,
+      20
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "zoom": 1,
+    "minZoom": 0.6,
+    "maxZoom": 3,
+    "near": 0.1,
+    "far": 100,
+    "maxPolarAngle": 0.35,
+    "maxAzimuthAngle": 0.5
+  },
+  "layers": [
+    {
+      "id": "sky",
+      "name": "Sky and sun",
+      "role": "sky",
+      "order": 0,
+      "asset": "assets/sky.png",
+      "mask": "masks/sky.png",
+      "depth": 0.0,
+      "scale": 1.08,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.0,
+      "castShadow": false,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "manual",
+        "method": "synthetic-fixture",
+        "confidence": 1,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "mountains",
+      "name": "Far mountains",
+      "role": "background",
+      "order": 1,
+      "asset": "assets/mountains.png",
+      "mask": "masks/mountains.png",
+      "depth": 0.6,
+      "scale": 1.06,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.25,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "manual",
+        "method": "synthetic-fixture",
+        "confidence": 1,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "hills_far",
+      "name": "Rolling hills",
+      "role": "midground",
+      "order": 2,
+      "asset": "assets/hills_far.png",
+      "mask": "masks/hills_far.png",
+      "depth": 1.2,
+      "scale": 1.04,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.5,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "manual",
+        "method": "synthetic-fixture",
+        "confidence": 1,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "hills_near",
+      "name": "Near hills",
+      "role": "midground",
+      "order": 3,
+      "asset": "assets/hills_near.png",
+      "mask": "masks/hills_near.png",
+      "depth": 1.8,
+      "scale": 1.02,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.75,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "manual",
+        "method": "synthetic-fixture",
+        "confidence": 1,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "foreground",
+      "name": "Trees and grass",
+      "role": "foreground",
+      "order": 4,
+      "asset": "assets/foreground.png",
+      "mask": "masks/foreground.png",
+      "depth": 2.4,
+      "scale": 1.0,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 1.0,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "manual",
+        "method": "synthetic-fixture",
+        "confidence": 1,
+        "inpainted": false
+      }
+    }
+  ],
+  "lighting": {
+    "preset": "day",
+    "ambient": {
+      "type": "hemisphere",
+      "color": "#fff4e0",
+      "groundColor": "#6b4a3a",
+      "intensity": 0.9
+    },
+    "key": {
+      "color": "#ffdfb0",
+      "colorTemperatureK": 4200,
+      "intensity": 2.2,
+      "position": [
+        -4,
+        5,
+        7
+      ],
+      "castShadow": true,
+      "shadow": {
+        "mapSize": 2048,
+        "bias": -0.0005,
+        "normalBias": 0.02,
+        "radius": 4
+      }
+    },
+    "background": "#1b1b1f"
+  },
+  "lightingPresets": {
+    "day": {
+      "preset": "day",
+      "ambient": {
+        "type": "hemisphere",
+        "color": "#fff4e0",
+        "groundColor": "#6b4a3a",
+        "intensity": 0.9
+      },
+      "key": {
+        "color": "#ffdfb0",
+        "colorTemperatureK": 4200,
+        "intensity": 2.2,
+        "position": [
+          -4,
+          5,
+          7
+        ],
+        "castShadow": true,
+        "shadow": {
+          "mapSize": 2048,
+          "bias": -0.0005,
+          "normalBias": 0.02,
+          "radius": 4
+        }
+      },
+      "background": "#1b1b1f"
+    },
+    "night": {
+      "preset": "night",
+      "ambient": {
+        "type": "hemisphere",
+        "color": "#8fa8ff",
+        "groundColor": "#1a1530",
+        "intensity": 0.35
+      },
+      "key": {
+        "color": "#b8c8ff",
+        "colorTemperatureK": 8500,
+        "intensity": 1.2,
+        "position": [
+          4,
+          6,
+          6
+        ],
+        "castShadow": true,
+        "shadow": {
+          "mapSize": 2048,
+          "bias": -0.0005,
+          "normalBias": 0.02,
+          "radius": 6
+        }
+      },
+      "rim": {
+        "color": "#6f8cff",
+        "intensity": 1.5,
+        "position": [
+          0,
+          2,
+          -3
+        ]
+      },
+      "background": "#0b0d18"
+    }
+  },
+  "rendering": {
+    "toneMapping": "neutral",
+    "exposure": 1,
+    "outputColorSpace": "srgb",
+    "antialias": true,
+    "shadows": true,
+    "maxPixelRatio": 2,
+    "contactShadows": {
+      "enabled": false,
+      "opacity": 0.4,
+      "blur": 2.5
+    }
+  },
+  "interaction": {
+    "orbit": true,
+    "zoom": true,
+    "parallax": {
+      "enabled": true,
+      "strength": 0.15
+    },
+    "explodedView": {
+      "enabled": true,
+      "spacing": 1.5
+    }
+  }
+}

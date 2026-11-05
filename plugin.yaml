@@ -1,0 +1,48 @@
+name: papercraft-3d
+version: "0.1.0"
+description: >-
+  Turn an AI-generated paper-cut / papercraft image into a layered, interactive
+  Three.js 2.5D web scene, with a design spec that stays in sync with the
+  scene.json it describes, and natural-language scene edits.
+author: youhong
+license: MIT
+manifest_version: 2
+api_version: 1
+requires_hermes: ">=0.22"
+tags: [3d, threejs, image, papercraft, creative]
+
+provides_tools:
+  - papercraft_analyze
+  - papercraft_segment
+  - papercraft_build_scene
+  - papercraft_generate_plan
+  - papercraft_update_scene
+  - papercraft_export_project
+provides_hooks: []
+
+# Image analysis uses the user's active Hermes model through ctx.llm (host-owned
+# credentials, automatic vision routing). No API key is required or hard-coded.
+# Optional segmentation backends are configured below; images are only sent to
+# a backend the user explicitly configures.
+config_schema:
+  workspace_dir:
+    type: str
+    default: ""
+    description: >-
+      Directory where PaperCraft projects are written. Empty = the plugin data
+      directory (<hermes home>/plugin-data/papercraft-3d/projects).
+  segmentation_backend:
+    type: str
+    default: "local"
+    choices: [local, http]
+    description: >-
+      'local' = built-in mask generation from the analysis plan (no network).
+      'http' = a segmentation service you run or trust (see segmentation_url).
+  segmentation_url:
+    type: str
+    default: ""
+    description: HTTPS endpoint of your segmentation service (only used when backend is 'http').
+  max_image_mb:
+    type: int
+    default: 10
+    description: Maximum accepted input image size in megabytes.

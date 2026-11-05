@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://papercraft-3d.local/schemas/layers/1.0",
+  "title": "PaperCraft 3D Layer Manifest",
+  "description": "Output of papercraft_segment (layers.json). Every listed asset must exist on disk; pixel boxes are [x0, y0, x1, y1] in source-image pixels.",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "image", "layers"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "mode": { "enum": ["layered", "preview"] },
+    "backend": { "type": "string", "maxLength": 60 },
+    "image": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": ["id", "order", "asset", "mask", "bbox", "coverage", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+          "order": { "type": "integer", "minimum": 0 },
+          "asset": { "type": "string" },
+          "mask": { "type": "string" },
+          "bbox": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 4, "maxItems": 4 },
+          "coverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fraction of image pixels that are opaque in this layer." },
+          "provenance": {
+            "type": "object",
+            "required": ["source"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "enum": ["auto", "manual", "preview"] },
+              "method": { "type": "string", "maxLength": 120 },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "inpainted": { "type": "boolean" },
+              "inpaintedFraction": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "viewLimits": {
+      "description": "Suggested camera limits so non-inpainted gaps are never exposed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxPolarAngle": { "type": "number", "minimum": 0, "maximum": 1.5708 },
+        "maxAzimuthAngle": { "type": "number", "minimum": 0, "maximum": 1.5708 }
+      }
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -1,0 +1,337 @@
+{
+  "schemaVersion": "1.0",
+  "sceneId": "template",
+  "name": "Paper Art Scene",
+  "mode": "layered",
+  "generator": {
+    "name": "papercraft-3d",
+    "version": "0.1.0",
+    "revision": 0
+  },
+  "source": {
+    "image": "assets/source.png",
+    "width": 1600,
+    "height": 1000
+  },
+  "units": {
+    "pixelsPerUnit": 100
+  },
+  "frame": {
+    "width": 16.0,
+    "height": 10.0
+  },
+  "camera": {
+    "type": "orthographic",
+    "position": [
+      0,
+      0,
+      20
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "zoom": 1,
+    "minZoom": 0.6,
+    "maxZoom": 3,
+    "near": 0.1,
+    "far": 100,
+    "maxPolarAngle": 0.35,
+    "maxAzimuthAngle": 0.5
+  },
+  "layers": [
+    {
+      "id": "sky",
+      "name": "Sky",
+      "role": "sky",
+      "order": 0,
+      "asset": "assets/sky.png",
+      "mask": "masks/sky.png",
+      "depth": 0.0,
+      "scale": 1.08,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.0,
+      "castShadow": false,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "auto",
+        "method": "template",
+        "confidence": 0,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "background",
+      "name": "Background",
+      "role": "background",
+      "order": 1,
+      "asset": "assets/background.png",
+      "mask": "masks/background.png",
+      "depth": 0.6,
+      "scale": 1.06,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.25,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "auto",
+        "method": "template",
+        "confidence": 0,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "midground_01",
+      "name": "Midground 1",
+      "role": "midground",
+      "order": 2,
+      "asset": "assets/midground_01.png",
+      "mask": "masks/midground_01.png",
+      "depth": 1.2,
+      "scale": 1.04,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.5,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "auto",
+        "method": "template",
+        "confidence": 0,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "midground_02",
+      "name": "Midground 2",
+      "role": "midground",
+      "order": 3,
+      "asset": "assets/midground_02.png",
+      "mask": "masks/midground_02.png",
+      "depth": 1.8,
+      "scale": 1.02,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 0.75,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "auto",
+        "method": "template",
+        "confidence": 0,
+        "inpainted": false
+      }
+    },
+    {
+      "id": "foreground",
+      "name": "Foreground",
+      "role": "foreground",
+      "order": 4,
+      "asset": "assets/foreground.png",
+      "mask": "masks/foreground.png",
+      "depth": 2.4,
+      "scale": 1.0,
+      "geometry": {
+        "type": "plane",
+        "thickness": 0.02
+      },
+      "material": {
+        "roughness": 0.95,
+        "metalness": 0,
+        "alphaTest": 0.5,
+        "side": "double",
+        "paperTexture": {
+          "enabled": true,
+          "strength": 0.06,
+          "scale": 8
+        }
+      },
+      "parallaxFactor": 1.0,
+      "castShadow": true,
+      "receiveShadow": true,
+      "visible": true,
+      "provenance": {
+        "source": "auto",
+        "method": "template",
+        "confidence": 0,
+        "inpainted": false
+      }
+    }
+  ],
+  "lighting": {
+    "preset": "day",
+    "ambient": {
+      "type": "hemisphere",
+      "color": "#fff4e0",
+      "groundColor": "#6b4a3a",
+      "intensity": 0.9
+    },
+    "key": {
+      "color": "#ffdfb0",
+      "colorTemperatureK": 4200,
+      "intensity": 2.2,
+      "position": [
+        -4,
+        5,
+        7
+      ],
+      "castShadow": true,
+      "shadow": {
+        "mapSize": 2048,
+        "bias": -0.0005,
+        "normalBias": 0.02,
+        "radius": 4
+      }
+    },
+    "background": "#1b1b1f"
+  },
+  "lightingPresets": {
+    "day": {
+      "preset": "day",
+      "ambient": {
+        "type": "hemisphere",
+        "color": "#fff4e0",
+        "groundColor": "#6b4a3a",
+        "intensity": 0.9
+      },
+      "key": {
+        "color": "#ffdfb0",
+        "colorTemperatureK": 4200,
+        "intensity": 2.2,
+        "position": [
+          -4,
+          5,
+          7
+        ],
+        "castShadow": true,
+        "shadow": {
+          "mapSize": 2048,
+          "bias": -0.0005,
+          "normalBias": 0.02,
+          "radius": 4
+        }
+      },
+      "background": "#1b1b1f"
+    },
+    "night": {
+      "preset": "night",
+      "ambient": {
+        "type": "hemisphere",
+        "color": "#8fa8ff",
+        "groundColor": "#1a1530",
+        "intensity": 0.35
+      },
+      "key": {
+        "color": "#b8c8ff",
+        "colorTemperatureK": 8500,
+        "intensity": 1.2,
+        "position": [
+          4,
+          6,
+          6
+        ],
+        "castShadow": true,
+        "shadow": {
+          "mapSize": 2048,
+          "bias": -0.0005,
+          "normalBias": 0.02,
+          "radius": 6
+        }
+      },
+      "rim": {
+        "color": "#6f8cff",
+        "intensity": 1.5,
+        "position": [
+          0,
+          2,
+          -3
+        ]
+      },
+      "background": "#0b0d18"
+    }
+  },
+  "rendering": {
+    "toneMapping": "neutral",
+    "exposure": 1,
+    "outputColorSpace": "srgb",
+    "antialias": true,
+    "shadows": true,
+    "maxPixelRatio": 2,
+    "contactShadows": {
+      "enabled": false,
+      "opacity": 0.4,
+      "blur": 2.5
+    }
+  },
+  "interaction": {
+    "orbit": true,
+    "zoom": true,
+    "parallax": {
+      "enabled": true,
+      "strength": 0.15
+    },
+    "explodedView": {
+      "enabled": true,
+      "spacing": 1.5
+    }
+  }
+}

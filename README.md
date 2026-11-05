@@ -1,0 +1,175 @@
+# PaperCraft 3D for Hermes
+
+> One image. One Hermes plugin. An interactive 3D web experience.
+
+A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that turns an
+AI-generated **paper-cut / papercraft image** into a layered, interactive
+**Three.js 2.5D scene**. It also writes a design spec (`DESIGN_SPEC.md`) that is
+generated from the scene's own `scene.json`, so the two cannot disagree. You can
+then change the scene in plain language ("make it night with cold moonlight").
+
+> **Status: v0.1.0, project skeleton (phase 1 of 7).** The plugin loads and
+> registers all six tools, and the data contract, security layer, tests and
+> viewer work. The pipeline stages are not implemented yet. Each one returns
+> an explicit `not_implemented` error and never fakes a success. See
+> [Roadmap](#roadmap).
+
+## How it works
+
+```
+image ──► papercraft_analyze ──► analysis.json   (vision model via Hermes ctx.llm)
+              │
+              ▼
+        papercraft_segment ────► layers/*.png + masks + layers.json
+              │
+              ▼
+        papercraft_build_scene ► scene.json  ──►  Three.js viewer
+              │                     ▲
+              ▼                     │ validated Scene Patch
+        papercraft_generate_plan    │
+              │               papercraft_update_scene  ◄── "make it night…"
+              ▼
+        DESIGN_SPEC.md ──► papercraft_export_project ──► standalone Vite project
+```
+
+`schemas/scene.schema.json` is the single source of truth. The Python plugin
+validates against it, and so does the viewer at load time (it uses the same
+file through Ajv). The design spec is rendered from it.
+
+## Tools
+
+| Tool | Purpose | Status |
+|---|---|---|
+| `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | input validation ✅, analysis in phase 2 |
+| `papercraft_segment` | 3–8 transparent layers + masks + `layers.json`. Inpaints revealed regions or limits the view angle. Fails rather than fakes, with an opt-in labelled *preview* mode | phase 3 |
+| `papercraft_build_scene` | Compose layers into a schema-valid `scene.json` | phase 4 |
+| `papercraft_generate_plan` | `DESIGN_SPEC.md` rendered from `scene.json` | phase 5 |
+| `papercraft_update_scene` | Apply a validated JSON-Patch-style Scene Patch (the agent translates the user's words into it). Keeps history and updates the spec | phase 6 |
+| `papercraft_export_project` | Standalone, relative-path Vite + Three.js project | phase 7 |
+
+Every tool returns a JSON envelope: `{"ok": true, "data": …, "warnings": […]}` or
+`{"ok": false, "error": {"code", "message", "retryable", "details"}}`. Error
+codes include `image_format`, `image_too_large`, `model_unavailable`,
+`model_output_invalid`, `segmentation_failed`, `scene_invalid`,
+`asset_missing`, `viewer_build_failed`, `export_failed`, `path_forbidden`,
+`precondition_failed` and `not_implemented`. See `core/errors.py`.
+
+## Install (development)
+
+Requirements: Hermes Agent `>=0.22`, Python ≥ 3.11, and Node ≥ 20.19 (viewer only).
+
+```bash
+git clone <this-repo-url> ~/.hermes/plugins/papercraft-3d
+```
+
+```bash
+hermes plugins enable papercraft-3d
+```
+
+```bash
+hermes plugins doctor ~/.hermes/plugins/papercraft-3d --ci
+```
+
+Python dependencies (`Pillow`, `numpy`, `jsonschema`) are declared in
+`pyproject.toml` within Hermes's core pins. Hermes asks for consent before it
+installs them. The full test procedure is in
+[`docs/HERMES_TEST_PLAN.md`](docs/HERMES_TEST_PLAN.md).
+
+### Plugin settings
+
+Settings go under `plugins.entries.papercraft-3d.settings` (the Desktop app also shows them under **Settings → Plugins**):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `workspace_dir` | plugin data dir | Where projects are written. Generated files never go into the plugin's install tree |
+| `segmentation_backend` | `local` | `local` (in-process, no network) or `http` (a service you configure) |
+| `segmentation_url` | — | HTTPS endpoint for the `http` backend |
+| `max_image_mb` | `10` | Upload limit (hard-capped at 10 MB in the MVP) |
+
+## Viewer
+
+```bash
+cd viewer
+```
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+The viewer opens `?scene=<url of scene.json>`. With no parameter it loads the
+bundled **synthetic fixture** (`viewer/public/scenes/fixture`). The fixture is
+drawn procedurally by `examples/make_synthetic_fixture.py`, has known
+ground-truth layers, and is labelled as such. It is not pipeline output.
+
+Features: a left scene tree (visibility, selection), a central orthographic
+view with limited orbit and zoom, mouse parallax, an exploded view, a light
+intensity control, a shadows toggle, day/night presets, camera reset, and a
+responsive phone layout. The viewer's controls only change the preview.
+Lasting changes go through `papercraft_update_scene`.
+
+## Tests
+
+```bash
+python -m venv .venv
+```
+
+```bash
+.venv/bin/pip install "Pillow>=10,<14" "numpy>=1.26,<3" "jsonschema>=4.18,<5" "pytest>=8,<10" "PyYAML>=6,<7"
+```
+
+```bash
+.venv/bin/python -m pytest tests
+```
+
+The tests cover the following:
+
+- Manifest and registration parity, mirroring `hermes plugins validate`'s "declared tools" check.
+- The handler contract: handlers never raise and always return JSON strings.
+- Path confinement, including symlink escapes.
+- Image validation: format spoofing, truncation, and size limits.
+- The scene schema, including the path-traversal and URL asset rules.
+
+## Security & privacy
+
+- **No API keys in the plugin.** Image analysis runs through Hermes's
+  `ctx.llm`, which uses the model and credentials you already configured in
+  Hermes. The image goes only to that provider.
+- **No undeclared network calls.** Segmentation runs locally by default.
+  The `http` backend contacts only the HTTPS URL you set.
+- **No shell commands.** The plugin never runs a subprocess, and never builds
+  a command from file names or model output. Export only copies files; you run
+  `npm` yourself.
+- **Confined output.** Every write is resolved inside the workspace
+  (`core/security.resolve_within`). The original upload is stored read-only and
+  never modified.
+- **Untrusted model output.** Model output is validated against JSON Schema
+  before use. Asset paths in `scene.json` must be relative, with no `..` and
+  no URLs.
+
+## Limitations
+
+A scene built from transparent layers is **2.5D**: stacked cut-out planes, not
+a 3D mesh with back-face topology. GLB export (planned, optional) will contain
+the same planes.
+
+## Roadmap
+
+1. ✅ Plugin skeleton: manifest, registration, schemas, security, tests, viewer scaffold
+2. ⬜ Image analysis (`ctx.llm` vision → `analysis.json`)
+3. ⬜ Layer conversion (masks, transparent layers, inpainting / view limits)
+4. ⬜ Three.js scene builder (`scene.json`) + `shape`/`extrude` geometry
+5. ⬜ Design spec generator
+6. ⬜ Natural-language Scene Patch (`papercraft_update_scene`)
+7. ⬜ Export, test report, demo, catalog PR
+
+## 中文摘要
+
+PaperCraft 3D 是 Hermes Agent 插件：把 AI 紙雕圖轉成可互動的 Three.js 2.5D 場景，並產生與 `scene.json` 完全一致的 `DESIGN_SPEC.md`，可用自然語言修改場景。目前為第一階段骨架；尚未實作的步驟會明確回傳 `not_implemented`，不會假裝成功。
+
+## License
+
+MIT
