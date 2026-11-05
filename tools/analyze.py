@@ -135,7 +135,7 @@ def _analyse(project: Project, info: ImageInfo, runtime: Runtime, *, max_layers:
     measured = measure_palette(source)
     present = present_colours(source)
     image_bytes, mime, model_size = prepare_model_image(source)
-    base = build_instructions(max_layers=max_layers, brief=brief)
+    base = build_instructions(max_layers=max_layers, brief=brief, measured=measured)
     provider = runtime.analysis_provider()
 
     instructions = base
@@ -171,6 +171,7 @@ def _analyse(project: Project, info: ImageInfo, runtime: Runtime, *, max_layers:
         "maxLayers": max_layers,
         "modelImage": {"width": model_size[0], "height": model_size[1], "mimeType": mime},
         "usage": result.usage,
+        "paletteCheck": review.palette_check,
         **({"brief": brief} if brief else {}),
     }
     validate("analysis", doc)  # the stored document must satisfy the full schema
@@ -191,7 +192,12 @@ def _summary(project: Project, doc: dict[str, Any]) -> dict[str, Any]:
         ],
         "palette": [c["hex"] for c in doc["palette"]],
         "measured_palette": [c["hex"] for c in doc["measured"]["palette"]],
-        "light": doc["light"],
+        "palette_check": doc["meta"]["paletteCheck"],
+        "light": {k: v for k, v in doc["light"].items() if k != "emitters"},
+        "emitters": [
+            {k: e[k] for k in ("name", "kind", "layerId", "color") if k in e}
+            for e in doc["light"].get("emitters", [])
+        ],
         "camera": doc["camera"],
         "reconstruction": doc["reconstruction"]["recommended"],
         "confidence": doc["confidence"],

@@ -20,9 +20,10 @@ from PIL import Image
 
 from .schemas import load_schema, schema_errors
 
-PROMPT_VERSION = "analysis-v1"
+PROMPT_VERSION = "analysis-v2"
 MAX_MODEL_SIDE = 1536  # long side of the copy sent to the model; bboxes are normalised
-PALETTE_SIZE = 8
+PALETTE_SIZE = 12
+MIN_CLUSTER_SHARE = 0.005  # drop k-means clusters smaller than 0.5% of the pixels
 PALETTE_MISMATCH_RGB = 60.0  # Euclidean RGB distance beyond which a claimed colour is "not in the image"
 
 # Fields the plugin fills in itself; the model must not produce them.
@@ -38,9 +39,22 @@ def model_schema() -> dict[str, Any]:
     return schema
 
 
-def build_instructions(*, max_layers: int, brief: str | None) -> str:
+def build_instructions(*, max_layers: int, brief: str | None,
+                       measured: list[dict[str, Any]] | None = None) -> str:
     schema_text = json.dumps(model_schema(), ensure_ascii=False, separators=(",", ":"))
     brief_text = brief.strip() if brief and brief.strip() else "(none)"
+    if measured:
+        listed = ", ".join(f"{c['hex']} ({c['share'] * 100:.1f}%)" for c in measured)
+        colour_source = (
+            "- MEASURED COLOURS: the plugin clustered the actual pixels into these colours (share of image):\n"
+            f"  {listed}\n"
+            "  Take palette hex values from this list where they fit, and give each a role and a name.\n"
+            "  Add a colour that is not listed only for a small but clearly visible accent.\n"
+            "- The plugin checks every palette colour against the pixels itself. Do NOT add needsReview\n"
+            "  items about being unable to sample pixels."
+        )
+    else:
+        colour_source = "- Use colours that are actually visible."
     return f"""You are analysing ONE image in a paper-cut / papercraft / layered paper-art style, so it
 can be rebuilt as a layered 2.5D Three.js scene (transparent cut-out planes stacked in depth).
 
@@ -53,16 +67,23 @@ LAYERS (most important)
 - "depthEstimate": 0 = farthest, 1 = nearest; it must increase with "order".
 - "bbox": normalised [x0, y0, x1, y1] of the layer's visible pixels, origin at the TOP-LEFT, x0<x1, y0<y1.
 - "description": say precisely which objects belong to the layer (shapes, colours, position) so a
-  segmentation step can find them without seeing your reasoning.
+  segmentation step can find them without seeing your reasoning. Keep each under ~120 words.
 - "occludes": ids of FARTHER layers this layer covers.
 - "id": lowercase, e.g. sky, background, midground_01, midground_02, foreground.
 - Use "geometryHint" = "extrude" only for pieces whose paper thickness is clearly visible.
 
-COLOURS AND LIGHT
-- "palette": the main colours actually present, as #RRGGBB, with a role for each.
-- "light": where the light comes from, judged from highlights and the drop shadows between paper
-  layers. azimuthDeg: 0 = from the viewer, -90 = from the left, +90 = from the right.
-  elevationDeg: positive = from above. colorTemperatureK: warm ~3000, neutral ~5500, cool ~8000.
+COLOURS
+- "palette": 5-12 main colours as #rrggbb, each with a role.
+{colour_source}
+
+LIGHT
+- "light": the main light that shades the paper surfaces, judged from highlights and the drop
+  shadows between paper layers (not from where a sun is drawn). azimuthDeg: 0 = from the viewer,
+  -90 = from the left, +90 = from the right. elevationDeg: positive = from above.
+  colorTemperatureK: warm ~3000, neutral ~5500, cool ~8000.
+- "light.emitters": every visible element that should glow in the 3D scene (a drawn sun or moon,
+  lanterns, lit windows, lamps, fire), with the id of the layer it belongs to, a normalised bbox and
+  its colour. Leave it empty if nothing glows.
 
 HONESTY
 - Give calibrated confidences in [0, 1]. Lower them when the image is ambiguous.
@@ -81,7 +102,7 @@ def build_repair_instructions(base: str, previous: str, problems: list[str]) -> 
     listed = "\n".join(f"- {p}" for p in problems[:25])
     return (
         f"{base}\n\nYour previous answer was rejected. Problems:\n{listed}\n\n"
-        f"Previous answer (fix it; return the complete corrected JSON object only):\n{previous[:12000]}"
+        f"Previous answer (fix it; return the complete corrected JSON object only):\n{previous[:30000]}"
     )
 
 
@@ -110,21 +131,58 @@ def _opaque_pixels(path: str, side: int = 256) -> np.ndarray:
     return arr[arr[:, 3] >= 128][:, :3]
 
 
+def _srgb_to_lab(rgb: np.ndarray) -> np.ndarray:
+    """sRGB uint8 (N, 3) -> CIE Lab (D65), for perceptual clustering."""
+    c = rgb.astype(np.float64) / 255.0
+    c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    xyz = c @ np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]]).T
+    xyz /= np.array([0.95047, 1.0, 1.08883])
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
+    return np.stack([116 * f[:, 1] - 16, 500 * (f[:, 0] - f[:, 1]), 200 * (f[:, 1] - f[:, 2])], axis=1)
+
+
+def _kmeans(x: np.ndarray, k: int, *, iters: int = 25, seed: int = 0) -> np.ndarray:
+    """Deterministic k-means++ / Lloyd. Returns the cluster label of each row."""
+    rng = np.random.default_rng(seed)
+    centres = [x[rng.integers(len(x))]]
+    for _ in range(1, k):
+        d2 = np.min(((x[:, None, :] - np.array(centres)[None]) ** 2).sum(-1), axis=1)
+        if d2.sum() == 0:
+            break
+        centres.append(x[rng.choice(len(x), p=d2 / d2.sum())])
+    c = np.array(centres)
+    labels = np.zeros(len(x), dtype=np.int64)
+    for _ in range(iters):
+        labels = np.argmin(((x[:, None, :] - c[None]) ** 2).sum(-1), axis=1)
+        new = np.array([x[labels == j].mean(0) if np.any(labels == j) else c[j] for j in range(len(c))])
+        if np.allclose(new, c):
+            break
+        c = new
+    return labels
+
+
 def measure_palette(path: str, colors: int = PALETTE_SIZE) -> list[dict[str, Any]]:
-    """Dominant colours measured from the pixels (median cut on a 256px copy), most common first."""
+    """Dominant colours measured from the pixels, most common first.
+
+    k-means in CIE Lab on a 256 px copy (deterministic). Unlike median cut in
+    RGB it keeps minority hues that differ strongly from the rest (water, moss,
+    lanterns) as their own clusters.
+    """
     pixels = _opaque_pixels(path)
     if pixels.size == 0:
         return []
-    sample = Image.fromarray(pixels.reshape(1, -1, 3), "RGB")
-    quant = sample.quantize(colors=colors, method=Image.Quantize.MEDIANCUT)
-    pal = quant.getpalette() or []
-    counts = sorted(quant.getcolors() or [], reverse=True)
-    total = sum(c for c, _ in counts) or 1
+    if len(pixels) > 20000:
+        pixels = pixels[np.random.default_rng(0).choice(len(pixels), 20000, replace=False)]
+    labels = _kmeans(_srgb_to_lab(pixels), min(colors, len(np.unique(pixels, axis=0))))
     out = []
-    for count, idx in counts:
-        r, g, b = pal[idx * 3: idx * 3 + 3]
-        out.append({"hex": f"#{r:02x}{g:02x}{b:02x}", "share": round(count / total, 4)})
-    return out
+    for j in np.unique(labels):
+        members = pixels[labels == j]
+        share = len(members) / len(pixels)
+        if share < MIN_CLUSTER_SHARE:
+            continue
+        r, g, b = np.rint(members.mean(0)).astype(int)
+        out.append({"hex": f"#{r:02x}{g:02x}{b:02x}", "share": round(share, 4)})
+    return sorted(out, key=lambda c: -c["share"])
 
 
 def present_colours(path: str, *, bin_size: int = 16, min_share: float = 0.002) -> np.ndarray:
@@ -156,6 +214,7 @@ class Review:
     errors: list[str] = field(default_factory=list)  # reject + repair
     warnings: list[str] = field(default_factory=list)  # accept, surface to the user
     needs_review: list[dict[str, str]] = field(default_factory=list)  # accept, add to needsReview
+    palette_check: dict[str, Any] = field(default_factory=dict)  # what the pixel cross-check found
 
 
 def review_analysis(data: Any, *, max_layers: int, present: np.ndarray | None = None) -> Review:
@@ -177,6 +236,10 @@ def review_analysis(data: Any, *, max_layers: int, present: np.ndarray | None = 
         x0, y0, x1, y1 = layer["bbox"]
         if not (x0 < x1 and y0 < y1):
             review.errors.append(f"layers/{i}/bbox: expected x0 < x1 and y0 < y1, got {layer['bbox']}")
+    for i, emitter in enumerate(data["light"].get("emitters", [])):
+        x0, y0, x1, y1 = emitter["bbox"]
+        if not (x0 < x1 and y0 < y1):
+            review.errors.append(f"light/emitters/{i}/bbox: expected x0 < x1 and y0 < y1, got {emitter['bbox']}")
     if review.errors:
         return review
 
@@ -196,18 +259,30 @@ def review_analysis(data: Any, *, max_layers: int, present: np.ndarray | None = 
                     "field": f"layers/{layer['id']}/occludes",
                     "reason": f"claims to cover '{target}', which is not behind it in the planned order",
                 })
+    for emitter in data["light"].get("emitters", []):
+        if emitter.get("layerId") and emitter["layerId"] not in by_id:
+            review.warnings.append(f"emitter '{emitter['name']}' names unknown layer '{emitter['layerId']}' (unlinked)")
     if by_order[0]["role"] not in ("sky", "background"):
         review.warnings.append(f"the farthest layer has role '{by_order[0]['role']}', expected sky/background")
 
     if present is not None and len(present):
+        mismatched = []
         for i, colour in enumerate(data["palette"]):
             nearest = float(np.min(np.linalg.norm(present - np.array(_rgb(colour["hex"])), axis=1)))
             if nearest > PALETTE_MISMATCH_RGB:
+                mismatched.append(colour["hex"].lower())
                 review.needs_review.append({
                     "field": f"palette/{i}",
                     "reason": f"{colour['hex']} is not close to any colour measured in the image "
                               f"(nearest distance {nearest:.0f}); see measured.palette",
                 })
+        review.palette_check = {
+            "method": "each palette colour vs. every colour covering >= 0.2% of the pixels "
+                      f"(RGB distance <= {PALETTE_MISMATCH_RGB:.0f})",
+            "checked": len(data["palette"]),
+            "found_in_image": len(data["palette"]) - len(mismatched),
+            "not_found": mismatched,
+        }
     return review
 
 
@@ -221,6 +296,12 @@ def finalize(data: dict[str, Any], review: Review) -> dict[str, Any]:
     for layer in out["layers"]:
         if "occludes" in layer:
             layer["occludes"] = [t for t in layer["occludes"] if t in known]
+    for colour in out["palette"]:
+        colour["hex"] = colour["hex"].lower()
+    for emitter in out["light"].get("emitters", []):
+        emitter["color"] = emitter["color"].lower()
+        if emitter.get("layerId") and emitter["layerId"] not in known:
+            del emitter["layerId"]
     out["needsReview"] = list(out.get("needsReview", [])) + review.needs_review
     if review.warnings:
         out["warnings"] = list(out.get("warnings", [])) + review.warnings

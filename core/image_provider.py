@@ -66,7 +66,7 @@ class HermesLlmAnalysisProvider:
                 json_mode=True,
                 schema_name="papercraft_analysis",
                 temperature=0.2,
-                max_tokens=6000,
+                max_tokens=12000,
                 timeout=timeout,
                 purpose="papercraft.analyze",
             )

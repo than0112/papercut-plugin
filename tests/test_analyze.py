@@ -228,3 +228,76 @@ def test_orders_are_renumbered(tmp_path, fixture_dir):
 def test_argument_validation(tmp_path, args):
     ctx = _ctx(tmp_path, [])
     assert call(ctx, "papercraft_analyze", args)["error"]["code"] == "invalid_argument"
+
+
+# --- Regression: a real model reply (analysis-v1, recorded from a Hermes run) ------------------
+
+def _real_reply():
+    from conftest import ROOT
+
+    return json.loads((ROOT / "tests/fixtures/replies/japanese_village_v1.json").read_text())["reply"]
+
+
+def test_real_reply_is_accepted_and_normalised(tmp_path, fixture_dir):
+    from papercraft_hermes.core.analysis import finalize, review_analysis
+
+    reply = _real_reply()
+    review = review_analysis(reply, max_layers=8)
+    assert review.errors == [] and review.warnings == []
+    doc = finalize(reply, review)
+    assert [layer["order"] for layer in doc["layers"]] == list(range(8))
+    assert all(c["hex"] == c["hex"].lower() for c in doc["palette"])
+    assert review_analysis(reply, max_layers=7).errors, "8 layers must be rejected when max_layers is 7"
+
+
+def test_real_reply_through_the_tool(tmp_path, fixture_dir):
+    ctx = _ctx(tmp_path, [_real_reply()])
+    res = call(ctx, "papercraft_analyze", {"image_path": str(fixture_dir / "source.png"), "max_layers": 8})
+    assert res["ok"], res
+    check = res["data"]["palette_check"]
+    # The fixture is a different image, so several of the real reply's colours are (correctly) not found.
+    assert check["checked"] == 12 and check["found_in_image"] + len(check["not_found"]) == 12
+    assert len(check["not_found"]) >= 1
+    flagged = {item["field"] for item in res["data"]["needs_review"]}
+    assert any(f.startswith("palette/") for f in flagged)
+
+
+def test_prompt_lists_measured_colours_and_no_sampling_disclaimer(tmp_path, fixture_dir):
+    ctx = _ctx(tmp_path, [GOOD])
+    call(ctx, "papercraft_analyze", {"image_path": str(fixture_dir / "source.png")})
+    from papercraft_hermes.core.analysis import measure_palette
+
+    prompt = ctx.llm.calls[0]["instructions"]
+    measured = measure_palette(str(fixture_dir / "source.png"))
+    assert "MEASURED COLOURS" in prompt and all(c["hex"] in prompt for c in measured)
+    assert "Do NOT add needsReview" in prompt and "emitters" in prompt
+
+
+def test_emitters(tmp_path, fixture_dir):
+    reply = copy.deepcopy(GOOD)
+    reply["light"]["emitters"] = [
+        {"name": "sun", "kind": "sun", "layerId": "sky", "bbox": [0.68, 0.12, 0.8, 0.3], "color": "#F7B267"},
+        {"name": "ghost lamp", "kind": "lamp", "layerId": "nowhere", "bbox": [0.1, 0.1, 0.2, 0.2], "color": "#ffffff"},
+    ]
+    ctx = _ctx(tmp_path, [reply])
+    res = call(ctx, "papercraft_analyze", {"image_path": str(fixture_dir / "source.png")})
+    assert res["ok"], res
+    assert res["data"]["emitters"][0] == {"name": "sun", "kind": "sun", "layerId": "sky", "color": "#f7b267"}
+    assert "layerId" not in res["data"]["emitters"][1]
+    assert any("nowhere" in w for w in res["warnings"])
+
+
+def test_measured_palette_keeps_minority_hues(tmp_path):
+    from PIL import ImageDraw
+
+    from papercraft_hermes.core.analysis import measure_palette
+
+    img = Image.new("RGB", (800, 450), "#f38f87")
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 240, 800, 450], fill="#787372")
+    draw.rectangle([340, 300, 400, 450], fill="#85c3cf")  # ~2.5 % water
+    path = tmp_path / "warm.png"
+    img.save(path)
+    hexes = [c["hex"] for c in measure_palette(str(path))]
+    assert "#85c3cf" in hexes
+    assert measure_palette(str(path)) == measure_palette(str(path)), "must be deterministic"

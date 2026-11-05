@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.2.0 (phase 2 of 7).** `papercraft_analyze` works end to end
+> **Status: v0.2.1 (phase 2 of 7).** `papercraft_analyze` works end to end
 > through Hermes's `ctx.llm`. The later stages (segmentation onward) still
 > return an explicit `not_implemented` error and never fake a success. See
 > [Roadmap](#roadmap).
@@ -144,10 +144,15 @@ The tests cover the following:
    occlusion consistent with order. If it fails, the model gets **one** repair
    attempt that lists the exact errors. If that also fails, the tool returns
    `model_output_invalid` and writes no `analysis.json`.
-3. Claims the plugin can measure are cross-checked against the pixels. A
-   palette colour that does not occur in the image becomes a `needsReview`
-   item. `measured.palette` stores the real dominant colours.
-4. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
+3. Before the call, the plugin clusters the real pixels (k-means in CIE Lab,
+   deterministic) into up to 12 colours. It stores them in `measured.palette`
+   and gives them to the model as candidates. Afterwards, every palette colour
+   the model returns is checked against every colour covering at least 0.2% of
+   the pixels. The result is returned as `palette_check`, and colours that are
+   not found become `needsReview` items.
+4. `light.emitters` lists elements that should glow (a drawn sun, lanterns,
+   lit windows), each with its layer, bbox and colour, for the scene builder.
+5. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
    attempt is logged in `logs/process.jsonl`.
 
 ## Security & privacy

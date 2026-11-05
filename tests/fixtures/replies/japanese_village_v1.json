@@ -1,0 +1,310 @@
+{
+ "_source": "Real reply recorded from the user's Hermes run (openai-codex / gpt-6.1-sol, prompt analysis-v1, 2026-11-05, 1672x941 source). Plugin-owned meta/measured removed; the lantern_houses bbox was reconstructed from a clipped paste.",
+ "reply": {
+  "schemaVersion": "1.0",
+  "subject": "夕陽下的日式山村紙雕景觀：遠方富士山與亮燈村落、五重塔，中央瀑布溪流與紅色拱橋，左側繫紅巾白狐，右側燈籠木屋，四周以櫻花枝幹形成框景。",
+  "style": {
+   "description": "以多層彩色紙片堆疊形成的立體紙雕構圖。紙面具有細緻纖維與壓紋，花瓣、山脊、屋簷、岩石及水花皆以清楚切邊表現；短距離接觸陰影加強層次。暖橘夕照與燈籠光對比藍灰山色、青綠溪水，整體近似正面觀看的精緻紙藝舞台。",
+   "keywords": [
+    "層疊紙雕",
+    "紙張纖維",
+    "剪紙邊緣",
+    "日式山村",
+    "櫻花框景",
+    "夕陽",
+    "暖光燈籠",
+    "富士山",
+    "白狐",
+    "紅色拱橋"
+   ]
+  },
+  "palette": [
+   {
+    "hex": "#EF899A",
+    "name": "天空與櫻花的珊瑚粉",
+    "role": "dominant"
+   },
+   {
+    "hex": "#FFC0CA",
+    "name": "受光櫻花淺粉",
+    "role": "highlight"
+   },
+   {
+    "hex": "#F59A73",
+    "name": "夕照橘桃色",
+    "role": "background"
+   },
+   {
+    "hex": "#FFDB78",
+    "name": "夕陽與燈籠金黃",
+    "role": "accent"
+   },
+   {
+    "hex": "#858CA8",
+    "name": "富士山藍灰紫",
+    "role": "secondary"
+   },
+   {
+    "hex": "#E9E3EA",
+    "name": "山頂積雪與白狐暖白",
+    "role": "highlight"
+   },
+   {
+    "hex": "#54796E",
+    "name": "山林灰綠",
+    "role": "secondary"
+   },
+   {
+    "hex": "#85C3CF",
+    "name": "瀑布溪流淺青藍",
+    "role": "secondary"
+   },
+   {
+    "hex": "#C4C66C",
+    "name": "苔蘚與低矮植被黃綠",
+    "role": "accent"
+   },
+   {
+    "hex": "#D95743",
+    "name": "紅橋與狐巾朱紅",
+    "role": "accent"
+   },
+   {
+    "hex": "#955D42",
+    "name": "木構與樹幹棕色",
+    "role": "secondary"
+   },
+   {
+    "hex": "#494957",
+    "name": "瓦頂與紙層深陰影",
+    "role": "shadow"
+   }
+  ],
+  "light": {
+   "azimuthDeg": -25,
+   "elevationDeg": 45,
+   "colorTemperatureK": 4800,
+   "softness": 0.65,
+   "shadowNotes": "紙片上緣及左上側較亮，部分雲片、花瓣與屋簷的陰影偏向右下，推估另有前上方偏左的柔和主光。畫面右中上方夕陽為暖色背景光源；右側吊燈、步道燈及屋窗呈局部金橘發光，不應全部合併成單一方向光。夕陽的畫面位置不等於紙雕表面的主照明方向。",
+   "confidence": 0.6
+  },
+  "camera": {
+   "type": "orthographic",
+   "reason": "整體為正面框景，紙片主要沿畫面平行方向堆疊；建築與橋梁的透視已畫在紙面內。正交相機較能保留原圖比例，避免重複添加透視。",
+   "maxTiltDeg": 5
+  },
+  "layers": [
+   {
+    "id": "sunset_sky",
+    "name": "夕陽天空與雲片",
+    "role": "sky",
+    "order": 0,
+    "description": "背景粉紅至橘黃色天空；右中上方黃色圓形夕陽，約位於 x=0.60、y=0.29；上方偏右奶油白長雲，以及橫跨山頂後方與夕陽前方的細長橘粉雲片。此層不含山體、枝花或建築。",
+    "bbox": [
+     0,
+     0,
+     1,
+     0.417
+    ],
+    "depthEstimate": 0,
+    "geometryHint": "plane",
+    "occludes": [],
+    "confidence": 0.97
+   },
+   {
+    "id": "distant_mountains",
+    "name": "富士山與遠山",
+    "role": "background",
+    "order": 1,
+    "description": "左中至畫面中央的大型富士山，包含藍灰紫山體及放射狀白色積雪切片；其前方橫向交錯的紫灰遠山稜線，向右延伸至塔與木屋後方。不含山腳樹林、村屋及瀑布。",
+    "bbox": [
+     0.137,
+     0.179,
+     0.813,
+     0.458
+    ],
+    "depthEstimate": 0.14,
+    "geometryHint": "plane",
+    "occludes": [
+     "sunset_sky"
+    ],
+    "confidence": 0.94
+   },
+   {
+    "id": "village_pagoda",
+    "name": "遠景村落、五重塔與周圍樹叢",
+    "role": "background",
+    "order": 2,
+    "description": "中央偏左至中央的小型亮窗村屋群，灰瓦屋頂與黃橘窗面；右上方深灰挑簷、紅棕塔身及細長塔剎的五重塔；村屋旁的小型深綠針葉樹、粉色櫻樹，以及塔基附近的綠色與粉色樹冠。排除右側大型木屋。",
+    "bbox": [
+     0.379,
+     0.133,
+     0.793,
+     0.549
+    ],
+    "depthEstimate": 0.28,
+    "geometryHint": "plane",
+    "occludes": [
+     "sunset_sky",
+     "distant_mountains"
+    ],
+    "confidence": 0.87
+   },
+   {
+    "id": "valley_water",
+    "name": "中景山谷、瀑布與溪流水面",
+    "role": "midground",
+    "order": 3,
+    "description": "左中方灰紫岩壁上的多段白藍瀑布、瀑底白色水花，以及經紅橋下方向畫面底部流出的青藍溪水與小跌水；兩側灰綠森林、黃綠苔蘚、零散岩石與中景粉色櫻樹。包含右側木屋後方的大型櫻樹樹冠與可見枝幹，不含橋、木屋、白狐所在巨石及最前方框景枝花。",
+    "bbox": [
+     0.031,
+     0.317,
+     1,
+     1
+    ],
+    "depthEstimate": 0.43,
+    "geometryHint": "plane",
+    "occludes": [
+     "distant_mountains",
+     "village_pagoda"
+    ],
+    "confidence": 0.88
+   },
+   {
+    "id": "red_bridge",
+    "name": "朱紅拱橋",
+    "role": "midground",
+    "order": 4,
+    "description": "畫面中下方橫跨溪谷的朱紅色拱橋，包含弧形橋面、上下橫欄、垂直欄柱、米棕色柱帽、深棕橋底與橋腳；約從左側白狐岩台右緣延伸至右側步道。橋洞保留透明，露出後方溪流。",
+    "bbox": [
+     0.239,
+     0.632,
+     0.565,
+     0.831
+    ],
+    "depthEstimate": 0.57,
+    "geometryHint": "plane",
+    "occludes": [
+     "valley_water"
+    ],
+    "confidence": 0.97
+   },
+   {
+    "id": "lantern_houses",
+    "name": "右側木屋、燈籠與步道",
+    "role": "midground",
+    "order": 5,
+    "description": "右側大型日式木屋的灰色層疊瓦頂、棕色樑柱、金橘格窗、門廊與階梯；中央偏右較小的亮燈屋舍；屋簷下的黃色吊燈籠與紅色流蘇，以及沿石板步道排列的矮柱燈。包含建築前方石板路與可見擋土石牆，排除畫面底邊最近的大岩塊與框景櫻花。",
+    "bbox": [
+     0.568,
+     0.225,
+     1,
+     0.914
+    ],
+    "depthEstimate": 0.69,
+    "geometryHint": "plane",
+    "occludes": [
+     "sunset_sky",
+     "distant_mountains",
+     "village_pagoda",
+     "valley_water"
+    ],
+    "confidence": 0.93
+   },
+   {
+    "id": "fox_foreground_banks",
+    "name": "白狐岩台與近岸岩石",
+    "role": "foreground",
+    "order": 6,
+    "description": "左下方坐姿白狐，含紅色頸巾、向左飄動的巾尾、粉紅耳內、閉眼面部與蓬鬆白尾；承托白狐的灰棕多角巨石及其苔蘚。另含畫面下緣左右兩側的大型岸石、近岸黃綠植被與貼附岩面的零散粉色落花；中間溪水保持開口。",
+    "bbox": [
+     0,
+     0.522,
+     1,
+     1
+    ],
+    "depthEstimate": 0.84,
+    "geometryHint": "plane",
+    "occludes": [
+     "valley_water",
+     "red_bridge",
+     "lantern_houses"
+    ],
+    "confidence": 0.9
+   },
+   {
+    "id": "sakura_frame",
+    "name": "前景櫻花枝幹框景",
+    "role": "foreground",
+    "order": 7,
+    "description": "沿左邊延伸並向上橫跨的深棕粗樹幹與枝條；上緣、左緣及右上角密集的大朵粉紅櫻花、花苞及少量飄落花瓣；左下角與右下角近鏡大花、綠葉和細莖。只選取環繞邊框的近景花枝，不併入山谷與木屋旁中景櫻樹。",
+    "bbox": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "depthEstimate": 1,
+    "geometryHint": "plane",
+    "occludes": [
+     "sunset_sky",
+     "distant_mountains",
+     "village_pagoda",
+     "valley_water",
+     "lantern_houses",
+     "fox_foreground_banks"
+    ],
+    "confidence": 0.94
+   }
+  ],
+  "reconstruction": {
+   "recommended": "2.5d",
+   "notes": "建議以八組透明裁切平面保留原構圖，組內可保留多個不相連紙片，但避免逐花新增深度層。先以正交相機對齊原圖，再依序配置非等距深度；山景層距較小，白狐與櫻花框景層距較大。水面、橋洞、枝葉縫隙及塔簷間須保留透明鏤空。紙面纖維與既有短陰影優先保留在貼圖，僅補低強度接觸陰影，避免雙重陰影。夕陽使用獨立暖色發光遮罩；吊燈、步道燈與窗面另設局部發光遮罩，光暈不可改變紙片輪廓。沒有足夠證據可確定各切邊的實際紙厚，故不直接指定擠出。此為分析規劃，未進行分割或建場景。",
+   "regions3d": []
+  },
+  "confidence": {
+   "overall": 0.88,
+   "layering": 0.9,
+   "palette": 0.72,
+   "lighting": 0.6
+  },
+  "needsReview": [
+   {
+    "field": "palette",
+    "reason": "HEX 為依影像外觀估計的代表色，本次未取得可執行逐像素取樣的工具，不能宣稱已完成像素核對。請於原始影像的無陰影紙面區取樣，並確認色彩描述檔及暖光造成的偏色。"
+   },
+   {
+    "field": "light",
+    "reason": "主光方向由局部切邊陰影估計；夕陽背景、紙雕表面打光與燈籠發光混合，單一方位角及色溫無法完整描述。請檢查雲片與花瓣下方的陰影方向。"
+   },
+   {
+    "field": "layers[2]",
+    "reason": "五重塔看似比中央村落更遠，為限制層數而合併同層。若需要明顯相機視差，請人工確認塔、村屋與周圍樹叢能否共用深度。"
+   },
+   {
+    "field": "layers[3]",
+    "reason": "溪流自瀑布延伸至畫面底部，實際包含很大的景深範圍；單平面適合近正面觀看，傾斜時可能顯得平坦。請確認是否需以組內小幅深度偏移處理，而不破壞水流連續性。"
+   },
+   {
+    "field": "layers[5].description",
+    "reason": "步道與擋土牆向前景延伸，與近岸岩石、苔蘚的分界不完全清楚；應人工核對橋右端接地處、階梯底部及下緣石牆的遮擋關係。"
+   },
+   {
+    "field": "layers[7].description",
+    "reason": "右側及左側部分櫻花與中景樹冠相接，需依枝幹連續性區分近景框花與屋旁櫻樹，避免將整片粉色區域誤切為同一層。"
+   },
+   {
+    "field": "layers",
+    "reason": "所有 bbox 均為目視估計的可見範圍外接框，並非分割遮罩結果；細花瓣、塔剎、燈籠流蘇及透明孔洞須在實際分割後重新核對。"
+   },
+   {
+    "field": "reconstruction.notes",
+    "reason": "局部暗邊可能是紙厚、層間落影或刻意繪製紋理，無法僅憑此圖可靠區分。若後續需要擠出，請先確認哪些切邊確實露出厚度。"
+   }
+  ],
+  "warnings": [
+   "八層為重建用的深度分組，並非原作品每張紙片的實際製作層數。",
+   "原圖已有建築透視、景深縮放與發光效果，重建時過度添加透視或強光可能偏離原貌。"
+  ]
+ }
+}

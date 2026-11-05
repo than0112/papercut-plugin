@@ -134,6 +134,68 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1
+        },
+        "emitters": {
+          "description": "Visible elements that should glow in the scene (drawn sun/moon, lanterns, lit windows...).",
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "kind",
+              "bbox",
+              "color"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "kind": {
+                "enum": [
+                  "sun",
+                  "moon",
+                  "lantern",
+                  "window",
+                  "lamp",
+                  "fire",
+                  "glow",
+                  "other"
+                ]
+              },
+              "layerId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+              },
+              "bbox": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "minItems": 4,
+                "maxItems": 4
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "intensity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Relative glow strength."
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
         }
       }
     },
@@ -381,6 +443,9 @@
           }
         },
         "usage": {
+          "type": "object"
+        },
+        "paletteCheck": {
           "type": "object"
         }
       }
