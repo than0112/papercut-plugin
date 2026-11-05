@@ -8,10 +8,9 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.1.0, project skeleton (phase 1 of 7).** The plugin loads and
-> registers all six tools, and the data contract, security layer, tests and
-> viewer work. The pipeline stages are not implemented yet. Each one returns
-> an explicit `not_implemented` error and never fakes a success. See
+> **Status: v0.2.0 (phase 2 of 7).** `papercraft_analyze` works end to end
+> through Hermes's `ctx.llm`. The later stages (segmentation onward) still
+> return an explicit `not_implemented` error and never fake a success. See
 > [Roadmap](#roadmap).
 
 ## How it works
@@ -40,7 +39,7 @@ file through Ajv). The design spec is rendered from it.
 
 | Tool | Purpose | Status |
 |---|---|---|
-| `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | input validation ✅, analysis in phase 2 |
+| `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
 | `papercraft_segment` | 3–8 transparent layers + masks + `layers.json`. Inpaints revealed regions or limits the view angle. Fails rather than fakes, with an opt-in labelled *preview* mode | phase 3 |
 | `papercraft_build_scene` | Compose layers into a schema-valid `scene.json` | phase 4 |
 | `papercraft_generate_plan` | `DESIGN_SPEC.md` rendered from `scene.json` | phase 5 |
@@ -85,6 +84,7 @@ Settings go under `plugins.entries.papercraft-3d.settings` (the Desktop app also
 | `segmentation_backend` | `local` | `local` (in-process, no network) or `http` (a service you configure) |
 | `segmentation_url` | — | HTTPS endpoint for the `http` backend |
 | `max_image_mb` | `10` | Upload limit (hard-capped at 10 MB in the MVP) |
+| `analysis_timeout_s` | `180` | Timeout per vision-model call (10–600 s) |
 
 ## Viewer
 
@@ -133,6 +133,23 @@ The tests cover the following:
 - Image validation: format spoofing, truncation, and size limits.
 - The scene schema, including the path-traversal and URL asset rules.
 
+## How analysis works
+
+1. The image is validated, copied read-only into a new project, and a copy
+   downscaled to 1536 px on its long side is sent to **your active Hermes
+   model** through `ctx.llm`. If that model is text-only, Hermes routes the
+   call to your configured vision model.
+2. The reply must pass `schemas/analysis.schema.json` and semantic checks:
+   unique ids and orders, `x0 < x1`, at most `max_layers` layers, and
+   occlusion consistent with order. If it fails, the model gets **one** repair
+   attempt that lists the exact errors. If that also fails, the tool returns
+   `model_output_invalid` and writes no `analysis.json`.
+3. Claims the plugin can measure are cross-checked against the pixels. A
+   palette colour that does not occur in the image becomes a `needsReview`
+   item. `measured.palette` stores the real dominant colours.
+4. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
+   attempt is logged in `logs/process.jsonl`.
+
 ## Security & privacy
 
 - **No API keys in the plugin.** Image analysis runs through Hermes's
@@ -159,7 +176,7 @@ the same planes.
 ## Roadmap
 
 1. ✅ Plugin skeleton: manifest, registration, schemas, security, tests, viewer scaffold
-2. ⬜ Image analysis (`ctx.llm` vision → `analysis.json`)
+2. ✅ Image analysis (`ctx.llm` vision → `analysis.json`)
 3. ⬜ Layer conversion (masks, transparent layers, inpainting / view limits)
 4. ⬜ Three.js scene builder (`scene.json`) + `shape`/`extrude` geometry
 5. ⬜ Design spec generator

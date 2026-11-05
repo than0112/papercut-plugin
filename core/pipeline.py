@@ -64,6 +64,7 @@ class Runtime:
 
     ctx: Any = None
     workspace_override: str | None = None
+    analysis_provider_override: Any = None  # tests inject a fake provider here
 
     def config(self, key: str, default: Any = None) -> Any:
         if self.ctx is None or not hasattr(self.ctx, "get_config"):
@@ -89,3 +90,18 @@ class Runtime:
     @property
     def llm(self) -> Any:
         return getattr(self.ctx, "llm", None) if self.ctx is not None else None
+
+    @property
+    def analysis_timeout(self) -> float:
+        try:
+            seconds = float(self.config("analysis_timeout_s", 180))
+        except (TypeError, ValueError):
+            seconds = 180.0
+        return max(10.0, min(seconds, 600.0))
+
+    def analysis_provider(self) -> Any:
+        if self.analysis_provider_override is not None:
+            return self.analysis_provider_override
+        from .image_provider import HermesLlmAnalysisProvider
+
+        return HermesLlmAnalysisProvider(self.llm)

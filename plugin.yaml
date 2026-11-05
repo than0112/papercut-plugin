@@ -1,5 +1,5 @@
 name: papercraft-3d
-version: "0.1.0"
+version: "0.2.0"
 description: >-
   Turn an AI-generated paper-cut / papercraft image into a layered, interactive
   Three.js 2.5D web scene, with a design spec that stays in sync with the
@@ -46,3 +46,7 @@ config_schema:
     type: int
     default: 10
     description: Maximum accepted input image size in megabytes.
+  analysis_timeout_s:
+    type: int
+    default: 180
+    description: Timeout in seconds for each vision-model call made by papercraft_analyze (10-600).

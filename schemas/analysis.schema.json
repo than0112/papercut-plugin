@@ -4,19 +4,56 @@
   "title": "PaperCraft 3D Image Analysis",
   "description": "Output of papercraft_analyze. Produced by a vision model, therefore untrusted until validated against this schema. Bounding boxes are normalised [x0, y0, x1, y1] with origin at the image's top-left.",
   "type": "object",
-  "required": ["schemaVersion", "subject", "style", "palette", "light", "camera", "layers", "reconstruction", "confidence", "needsReview"],
+  "required": [
+    "schemaVersion",
+    "subject",
+    "style",
+    "palette",
+    "light",
+    "camera",
+    "layers",
+    "reconstruction",
+    "confidence",
+    "needsReview"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": "1.0" },
-    "subject": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
     "style": {
       "type": "object",
-      "required": ["description", "keywords"],
+      "required": [
+        "description",
+        "keywords"
+      ],
       "additionalProperties": false,
       "properties": {
-        "description": { "type": "string", "maxLength": 1000 },
-        "keywords": { "type": "array", "items": { "type": "string", "maxLength": 40 }, "maxItems": 12 },
-        "references": { "type": "array", "items": { "type": "string", "maxLength": 120 }, "maxItems": 8 }
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "maxItems": 12
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "maxItems": 8
+        }
       }
     },
     "palette": {
@@ -25,37 +62,104 @@
       "maxItems": 12,
       "items": {
         "type": "object",
-        "required": ["hex", "role"],
+        "required": [
+          "hex",
+          "role"
+        ],
         "additionalProperties": false,
         "properties": {
-          "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
-          "name": { "type": "string", "maxLength": 60 },
-          "role": { "enum": ["dominant", "secondary", "accent", "shadow", "highlight", "background"] },
-          "share": { "type": "number", "minimum": 0, "maximum": 1 }
+          "hex": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "enum": [
+              "dominant",
+              "secondary",
+              "accent",
+              "shadow",
+              "highlight",
+              "background"
+            ]
+          },
+          "share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
         }
       }
     },
     "light": {
       "type": "object",
-      "required": ["azimuthDeg", "elevationDeg", "colorTemperatureK", "softness", "confidence"],
+      "required": [
+        "azimuthDeg",
+        "elevationDeg",
+        "colorTemperatureK",
+        "softness",
+        "confidence"
+      ],
       "additionalProperties": false,
       "properties": {
-        "azimuthDeg": { "type": "number", "minimum": -180, "maximum": 180, "description": "0 = from the viewer, -90 = from the left, 90 = from the right." },
-        "elevationDeg": { "type": "number", "minimum": -90, "maximum": 90 },
-        "colorTemperatureK": { "type": "number", "minimum": 1000, "maximum": 20000 },
-        "softness": { "type": "number", "minimum": 0, "maximum": 1 },
-        "shadowNotes": { "type": "string", "maxLength": 500 },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        "azimuthDeg": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "description": "0 = from the viewer, -90 = from the left, 90 = from the right."
+        },
+        "elevationDeg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "colorTemperatureK": {
+          "type": "number",
+          "minimum": 1000,
+          "maximum": 20000
+        },
+        "softness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "shadowNotes": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "camera": {
       "type": "object",
-      "required": ["type", "reason"],
+      "required": [
+        "type",
+        "reason"
+      ],
       "additionalProperties": false,
       "properties": {
-        "type": { "enum": ["orthographic", "perspective"] },
-        "reason": { "type": "string", "maxLength": 500 },
-        "maxTiltDeg": { "type": "number", "minimum": 0, "maximum": 60 }
+        "type": {
+          "enum": [
+            "orthographic",
+            "perspective"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "maxTiltDeg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        }
       }
     },
     "layers": {
@@ -64,55 +168,273 @@
       "maxItems": 8,
       "items": {
         "type": "object",
-        "required": ["id", "name", "role", "order", "description", "bbox", "depthEstimate", "confidence"],
+        "required": [
+          "id",
+          "name",
+          "role",
+          "order",
+          "description",
+          "bbox",
+          "depthEstimate",
+          "confidence"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
-          "name": { "type": "string", "maxLength": 120 },
-          "role": { "enum": ["sky", "background", "midground", "foreground", "detail"] },
-          "order": { "type": "integer", "minimum": 0, "description": "0 = farthest." },
-          "description": { "type": "string", "maxLength": 500, "description": "What belongs to this layer, used to guide segmentation." },
-          "bbox": { "type": "array", "items": { "type": "number", "minimum": 0, "maximum": 1 }, "minItems": 4, "maxItems": 4 },
-          "depthEstimate": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = farthest, 1 = nearest." },
-          "geometryHint": { "enum": ["plane", "shape", "extrude"] },
-          "occludes": { "type": "array", "items": { "type": "string" }, "description": "Ids of layers this one covers." },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "role": {
+            "enum": [
+              "sky",
+              "background",
+              "midground",
+              "foreground",
+              "detail"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0 = farthest."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "What belongs to this layer, used to guide segmentation."
+          },
+          "bbox": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "depthEstimate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "0 = farthest, 1 = nearest."
+          },
+          "geometryHint": {
+            "enum": [
+              "plane",
+              "shape",
+              "extrude"
+            ]
+          },
+          "occludes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ids of layers this one covers."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
         }
       }
     },
     "reconstruction": {
       "type": "object",
-      "required": ["recommended", "notes"],
+      "required": [
+        "recommended",
+        "notes"
+      ],
       "additionalProperties": false,
       "properties": {
-        "recommended": { "enum": ["2.5d", "3d"] },
-        "notes": { "type": "string", "maxLength": 1000 },
-        "regions3d": { "type": "array", "items": { "type": "string" }, "description": "Layer ids that could benefit from real geometry." }
+        "recommended": {
+          "enum": [
+            "2.5d",
+            "3d"
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "regions3d": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Layer ids that could benefit from real geometry."
+        }
       }
     },
     "confidence": {
       "type": "object",
-      "required": ["overall"],
+      "required": [
+        "overall"
+      ],
       "additionalProperties": false,
       "properties": {
-        "overall": { "type": "number", "minimum": 0, "maximum": 1 },
-        "layering": { "type": "number", "minimum": 0, "maximum": 1 },
-        "palette": { "type": "number", "minimum": 0, "maximum": 1 },
-        "lighting": { "type": "number", "minimum": 0, "maximum": 1 }
+        "overall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "layering": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "palette": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "lighting": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "needsReview": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["field", "reason"],
+        "required": [
+          "field",
+          "reason"
+        ],
         "additionalProperties": false,
         "properties": {
-          "field": { "type": "string", "maxLength": 120 },
-          "reason": { "type": "string", "maxLength": 500 }
+          "field": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
         }
       }
     },
-    "warnings": { "type": "array", "items": { "type": "string", "maxLength": 500 } }
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "meta": {
+      "description": "Written by the plugin, never by the model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model",
+        "promptVersion",
+        "createdAt",
+        "attempts"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "promptVersion": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxLayers": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 8
+        },
+        "brief": {
+          "type": "string"
+        },
+        "modelImage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "type": "integer"
+            },
+            "height": {
+              "type": "integer"
+            },
+            "mimeType": {
+              "type": "string"
+            }
+          }
+        },
+        "usage": {
+          "type": "object"
+        }
+      }
+    },
+    "measured": {
+      "description": "Measured from the source pixels by the plugin (deterministic), used to cross-check the model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "palette",
+        "image"
+      ],
+      "properties": {
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hex",
+              "share"
+            ],
+            "properties": {
+              "hex": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "share": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

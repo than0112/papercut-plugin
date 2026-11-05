@@ -80,14 +80,6 @@ def test_project_tools_report_missing_project(registered, tool):
     assert result["error"]["code"] == "project_not_found"
 
 
-def test_analyze_validates_image_then_reports_not_implemented(registered, fixture_dir):
-    result = call(registered, "papercraft_analyze", {"image_path": str(fixture_dir / "source.png")})
-    assert result["ok"] is False, "an unimplemented stage must never claim success"
-    assert result["error"]["code"] == "not_implemented"
-    info = result["error"]["details"]["validated_image"]
-    assert (info["format"], info["width"], info["height"]) == ("PNG", 480, 320)
-
-
 def test_analyze_rejects_non_image(registered, tmp_path):
     fake = tmp_path / "evil.png"
     fake.write_text("not really a png")

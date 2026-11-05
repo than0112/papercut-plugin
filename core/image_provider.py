@@ -26,7 +26,7 @@ from .errors import ErrorCode, PaperCraftError, not_implemented
 
 @dataclass
 class AnalysisResult:
-    data: Any  # parsed JSON, still untrusted until schema-validated
+    data: Any  # parsed JSON or None; untrusted until validated by core.analysis.review_analysis
     provider: str
     model: str
     raw_text: str = ""
@@ -36,34 +36,24 @@ class AnalysisResult:
 class AnalysisProvider(Protocol):
     name: str
 
-    def analyze(
-        self,
-        image_bytes: bytes,
-        mime_type: str,
-        *,
-        instructions: str,
-        json_schema: dict[str, Any],
-        timeout: float,
-    ) -> AnalysisResult: ...
+    def analyze(self, image_bytes: bytes, mime_type: str, *, instructions: str, timeout: float) -> AnalysisResult: ...
 
 
 class HermesLlmAnalysisProvider:
-    """Vision analysis through Hermes's ``ctx.llm`` (no keys, follows the user's model)."""
+    """Vision analysis through Hermes's ``ctx.llm`` (no keys, follows the user's model).
+
+    Uses ``json_mode=True`` with the schema embedded in the instructions rather
+    than ``json_schema=``: with ``json_schema`` Hermes raises on a schema
+    mismatch and the raw reply is lost, which makes a targeted repair attempt
+    impossible. Validation happens in ``core.analysis`` instead.
+    """
 
     name = "hermes-llm"
 
     def __init__(self, llm: Any) -> None:
         self._llm = llm
 
-    def analyze(
-        self,
-        image_bytes: bytes,
-        mime_type: str,
-        *,
-        instructions: str,
-        json_schema: dict[str, Any],
-        timeout: float,
-    ) -> AnalysisResult:
+    def analyze(self, image_bytes: bytes, mime_type: str, *, instructions: str, timeout: float) -> AnalysisResult:
         if self._llm is None:
             raise PaperCraftError(
                 ErrorCode.MODEL_UNAVAILABLE,
@@ -73,32 +63,30 @@ class HermesLlmAnalysisProvider:
             result = self._llm.complete_structured(
                 instructions=instructions,
                 input=[{"type": "image", "data": image_bytes, "mime_type": mime_type}],
-                json_schema=json_schema,
+                json_mode=True,
                 schema_name="papercraft_analysis",
                 temperature=0.2,
+                max_tokens=6000,
                 timeout=timeout,
                 purpose="papercraft.analyze",
             )
         except TimeoutError as exc:
-            raise PaperCraftError(ErrorCode.TIMEOUT, f"Vision model timed out after {timeout}s.") from exc
+            raise PaperCraftError(ErrorCode.TIMEOUT, f"Vision model timed out after {timeout:.0f}s.") from exc
         except Exception as exc:  # provider errors are not under our control
             raise PaperCraftError(
                 ErrorCode.MODEL_UNAVAILABLE,
-                f"Vision model call failed: {type(exc).__name__}: {exc}",
+                f"Vision model call failed: {type(exc).__name__}: {exc}. "
+                "Check that Hermes has a vision-capable model configured (`hermes model`).",
             ) from exc
-        if getattr(result, "content_type", None) != "json" or result.parsed is None:
-            raise PaperCraftError(
-                ErrorCode.MODEL_OUTPUT_INVALID,
-                "The model did not return JSON matching the analysis schema.",
-                details={"raw_text": (getattr(result, "text", "") or "")[:2000]},
-            )
         usage = getattr(result, "usage", None)
+        parsed = result.parsed if getattr(result, "content_type", None) == "json" else None
         return AnalysisResult(
-            data=result.parsed,
+            data=parsed,
             provider=getattr(result, "provider", "") or "",
             model=getattr(result, "model", "") or "",
             raw_text=getattr(result, "text", "") or "",
-            usage=dict(vars(usage)) if usage is not None and hasattr(usage, "__dict__") else {},
+            usage={k: v for k, v in vars(usage).items() if isinstance(v, (int, float))}
+            if usage is not None and hasattr(usage, "__dict__") else {},
         )
 
 

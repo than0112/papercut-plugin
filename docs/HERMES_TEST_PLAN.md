@@ -60,6 +60,24 @@ HERMES_PLUGINS_DEBUG=1 hermes plugins list
 
 ## 測試 2：圖片分析（第二階段）
 
+前置：外掛已更新到 v0.2.0（`git -C ~/.hermes/plugins/papercraft-3d pull`），Hermes 已設定可看圖的模型（`hermes model`）。
+
+在 Hermes 對話中（附上一張紙雕圖）：
+
+> 用 papercraft_analyze 分析這張圖片，保留原始構圖，柔和午後光線，最多 5 層，然後把 needsReview 的項目列給我。
+
+檢查專案資料夾（路徑在工具回傳的 `project_dir`）：
+
+```powershell
+Get-Content "<project_dir>\analysis.json"
+```
+
+```powershell
+Get-Content "<project_dir>\logs\process.jsonl"
+```
+
+另外測試失敗路徑：暫時把模型切成不支援圖片的模型，或拔網路後呼叫一次，應回傳 `model_unavailable` 或 `timeout`，且**不能**宣稱分析完成；之後用 `project_id` 重新分析同一個專案，應成功且不會多出第二個專案。
+
 - [ ] 輸入一張圖層清楚的紙雕圖，產生有效的 `analysis.json`（通過 schema）
 - [ ] 圖層順序合理（天空/背景 order 最小）
 - [ ] 調色盤 HEX 與畫面相符
