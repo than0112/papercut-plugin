@@ -52,6 +52,8 @@ class Regions:
     areas: np.ndarray  # pixel count per region
     adjacency: dict[int, dict[int, int]]  # region -> neighbour -> shared boundary length
     merge_threshold: float = 0.0  # Lab distance used to merge the base segments
+    base: np.ndarray | None = None  # fine Felzenszwalb segments (before merging)
+    lab: np.ndarray | None = None  # Lab work image
 
 
 @dataclass
@@ -110,41 +112,170 @@ def _relabel(labels: np.ndarray) -> np.ndarray:
     return inverse.reshape(labels.shape)
 
 
-def oversegment(work_rgb: np.ndarray, *, max_marks: int = MAX_MARKS) -> Regions:
-    """Edge-following over-segmentation, merged by colour until <= max_marks regions are significant.
+def _ward_merge(lab: np.ndarray, base: np.ndarray, *, min_area: int, max_marks: int,
+                exclude: int | None = None) -> tuple[np.ndarray, float]:
+    """Agglomerative merge of adjacent segments, cheapest first, until <= max_marks are significant.
 
-    Felzenszwalb's graph segmentation at a fine scale follows the paper cut lines
-    exactly. Adjacent regions are then merged transitively when their mean Lab
-    colours differ by less than a threshold, so smooth gradients and soft cast
-    shadows join the paper they lie on. The threshold is the smallest one that
-    leaves at most ``max_marks`` significant regions.
+    Cost of merging a and b = (n_a * n_b / (n_a + n_b)) * |mean_a - mean_b|^2 in Lab (Ward).
+    Means are recomputed after every merge, so gradual colour chains (pink sky ->
+    pink blossom -> white -> grey) cannot collapse into one region the way a
+    transitive threshold merge does. Small specks are absorbed first.
+    Returns the merged labels and the largest Lab distance between two significant regions merged.
+    ``exclude`` is a segment id that never merges and is not counted (used to restrict the
+    merge to part of the image).
+    """
+    import heapq
+
+    n = int(base.max()) + 1
+    flat = base.ravel()
+    count = np.bincount(flat, minlength=n).astype(np.float64)
+    sums = np.stack([np.bincount(flat, weights=lab[..., c].ravel(), minlength=n) for c in range(3)], 1)
+    neighbours: list[set[int]] = [set() for _ in range(n)]
+    for a, b in ((base[:, :-1], base[:, 1:]), (base[:-1, :], base[1:, :])):
+        diff = a != b
+        for x, y in np.unique(np.stack([a[diff], b[diff]], 1), axis=0).tolist():
+            neighbours[x].add(y)
+            neighbours[y].add(x)
+    parent = np.arange(n)
+    version = np.zeros(n, dtype=np.int64)
+    alive = np.ones(n, dtype=bool)
+
+    def cost(a: int, b: int) -> tuple[float, float]:
+        d = sums[a] / count[a] - sums[b] / count[b]
+        dist2 = float(d @ d)
+        return count[a] * count[b] / (count[a] + count[b]) * dist2, dist2 ** 0.5
+
+    if exclude is not None:
+        for nb in neighbours[exclude]:
+            neighbours[nb].discard(exclude)
+        neighbours[exclude] = set()
+    heap = []
+    for a in range(n):
+        for b in neighbours[a]:
+            if a < b:
+                heapq.heappush(heap, (cost(a, b)[0], a, b, 0, 0))
+    significant = int(np.sum(count >= min_area)) - int(exclude is not None and count[exclude] >= min_area)
+    regions_alive = n - int(exclude is not None)
+    max_merged = 0.0
+    # Stop when few enough significant regions remain and specks are gone.
+    while heap and (significant > max_marks or regions_alive > 4 * max_marks):
+        c, a, b, va, vb = heapq.heappop(heap)
+        if not (alive[a] and alive[b]) or version[a] != va or version[b] != vb:
+            continue
+        if count[a] < count[b]:
+            a, b = b, a  # keep the larger id as survivor
+        if count[a] >= min_area and count[b] >= min_area:  # only merges of two real regions count
+            max_merged = max(max_merged, cost(a, b)[1])
+        significant -= int(count[a] >= min_area) + int(count[b] >= min_area)
+        sums[a] += sums[b]
+        count[a] += count[b]
+        significant += int(count[a] >= min_area)
+        alive[b] = False
+        parent[b] = a
+        regions_alive -= 1
+        version[a] += 1
+        for nb in neighbours[b]:
+            if nb != a:
+                neighbours[nb].discard(b)
+                neighbours[nb].add(a)
+                neighbours[a].add(nb)
+        neighbours[a].discard(b)
+        neighbours[b] = set()
+        for nb in neighbours[a]:
+            pa, pb = (a, nb) if a < nb else (nb, a)
+            heapq.heappush(heap, (cost(pa, pb)[0], pa, pb, version[pa], version[pb]))
+
+    # Resolve parents (path compression) and relabel.
+    root = parent.copy()
+    for i in range(n):
+        r = i
+        while root[r] != r:
+            r = root[r]
+        root[i] = r
+    return _relabel(root[base]), max_merged
+
+
+def oversegment(work_rgb: np.ndarray, *, max_marks: int = MAX_MARKS) -> Regions:
+    """Edge-following over-segmentation, merged agglomeratively to <= max_marks significant regions.
+
+    Felzenszwalb's graph segmentation at a fine scale follows the paper cut lines;
+    a Ward-style agglomerative merge then joins similar neighbours (gradients, soft
+    shadows) without the chaining a transitive threshold merge suffers from.
     """
     lab = skcolor.rgb2lab(work_rgb)
     n_pixels = work_rgb.shape[0] * work_rgb.shape[1]
-    base = felzenszwalb(work_rgb, scale=FZ_SCALE, sigma=0.8, min_size=FZ_MIN_SIZE)
-    rag = skgraph.rag_mean_color(lab, base, mode="distance")
+    base = _relabel(felzenszwalb(work_rgb, scale=FZ_SCALE, sigma=0.8, min_size=FZ_MIN_SIZE))
     min_area = max(16, int(MIN_MARK_AREA * n_pixels))
-
-    def merged_at(thresh: float) -> np.ndarray:
-        return _relabel(skgraph.cut_threshold(base, rag, thresh, in_place=False))
-
-    def significant(labels: np.ndarray) -> int:
-        return int(np.sum(np.bincount(labels.ravel()) >= min_area))
-
-    lo, hi = 0.5, 60.0
-    best = merged_at(hi)
-    for _ in range(12):
-        mid = (lo + hi) / 2
-        candidate = merged_at(mid)
-        if significant(candidate) <= max_marks:
-            best, hi = candidate, mid
-        else:
-            lo = mid
-
-    areas = np.bincount(best.ravel())
+    labels, max_merged = _ward_merge(lab, base, min_area=min_area, max_marks=max_marks)
+    areas = np.bincount(labels.ravel())
     marked = [int(r) for r in np.argsort(-areas) if areas[r] >= min_area][:max_marks]
-    return Regions(labels=best, marked=marked, numbers={r: i + 1 for i, r in enumerate(marked)},
-                   areas=areas, adjacency=_adjacency(best), merge_threshold=round(hi, 2))
+    return Regions(labels=labels, marked=marked, numbers={r: i + 1 for i, r in enumerate(marked)},
+                   areas=areas, adjacency=_adjacency(labels), merge_threshold=round(max_merged, 2),
+                   base=base, lab=lab)
+
+
+REFINE_MAX_REGIONS = 6  # uncertain regions subdivided in the second labelling round
+REFINE_MIN_AREA = 0.005  # ... if they cover at least this fraction of the image
+REFINE_PARTS = 12  # target sub-regions per refined region
+
+
+def subdivide(regions: Regions, targets: list[int]) -> tuple[Regions, dict[int, int], list[int]]:
+    """Split each target region into ~REFINE_PARTS parts by re-merging its base segments.
+
+    Returns the new Regions (untouched regions keep their id; parts get new ids), a map
+    part id -> parent region id, and the part ids in display order (largest first).
+    """
+    labels = regions.labels.copy()
+    next_id = int(labels.max()) + 1
+    parent: dict[int, int] = {}
+    for region in targets:
+        mask = regions.labels == region
+        ys, xs = np.nonzero(mask)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        sub_mask = mask[y0:y1, x0:x1]
+        base = regions.base[y0:y1, x0:x1]
+        inside = _relabel(np.where(sub_mask, base, -1))  # -1 sorts first -> id 0 = outside
+        has_outside = bool((~sub_mask).any())
+        excl = 0 if has_outside else None
+        min_area = max(16, int(0.04 * sub_mask.sum() / REFINE_PARTS))
+        parts, _ = _ward_merge(regions.lab[y0:y1, x0:x1], inside, min_area=min_area,
+                               max_marks=REFINE_PARTS + int(has_outside), exclude=excl)
+        outside_id = parts[~sub_mask][0] if has_outside else None
+        for part in np.unique(parts[sub_mask]):
+            if part == outside_id:
+                continue
+            sel = np.zeros_like(mask)
+            sel[y0:y1, x0:x1] = sub_mask & (parts == part)
+            labels[sel] = next_id
+            parent[next_id] = region
+            next_id += 1
+    areas = np.bincount(labels.ravel(), minlength=next_id)
+    order = sorted(parent, key=lambda r: -areas[r])
+    new = Regions(labels=labels, marked=regions.marked, numbers=regions.numbers, areas=areas,
+                  adjacency=_adjacency(labels), merge_threshold=regions.merge_threshold,
+                  base=regions.base, lab=regions.lab)
+    return new, parent, order
+
+
+def render_refine_marks(work_rgb: np.ndarray, regions: Regions, parts: list[int]) -> Image.Image:
+    """Everything except the parts being refined is dimmed; parts are outlined and numbered 1..n."""
+    focus = np.isin(regions.labels, parts)
+    img = work_rgb.astype(np.float32)
+    img[~focus] *= 0.3
+    sub = np.where(focus, regions.labels, -1)
+    edges = find_boundaries(sub, mode="inner") & focus
+    img[edges] = img[edges] * 0.25 + 255 * 0.75
+    out = Image.fromarray(img.astype(np.uint8))
+    draw = ImageDraw.Draw(out)
+    for i, part in enumerate(parts, start=1):
+        mask = regions.labels == part
+        sl = ndi.find_objects(mask.astype(np.int8))[0]
+        dist = ndi.distance_transform_edt(np.pad(mask[sl], 1))[1:-1, 1:-1]
+        y, x = np.unravel_index(int(np.argmax(dist)), dist.shape)
+        size = int(np.clip(float(dist[y, x]) * 1.1, 11, 26))
+        draw.text((x + sl[1].start, y + sl[0].start), str(i), anchor="mm", font=_font(size),
+                  fill=(255, 255, 255), stroke_width=max(2, size // 6), stroke_fill=(0, 0, 0))
+    return out
 
 
 # --------------------------------------------------------------------------- marks image
@@ -193,12 +324,14 @@ def region_layer_map(regions: Regions, assignment: dict[int, int]) -> tuple[np.n
     per-region layer index.
     """
     n = len(regions.areas)
+    present = np.zeros(n, dtype=bool)
+    present[np.unique(regions.labels)] = True
     layer = np.full(n, -1, dtype=np.int64)
     how: dict[int, str] = {}
     for region, idx in assignment.items():
         layer[region] = idx
         how[region] = "labelled"
-    pending = [r for r in range(n) if layer[r] < 0]
+    pending = [r for r in range(n) if layer[r] < 0 and present[r]]
     while pending:
         progressed = []
         for r in pending:

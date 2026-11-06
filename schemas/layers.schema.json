@@ -4,23 +4,52 @@
   "title": "PaperCraft 3D Layer Manifest",
   "description": "Output of papercraft_segment (layers.json). Paths are relative to the project directory. Pixel boxes are [x0, y0, x1, y1] in source-image pixels, x1/y1 exclusive.",
   "type": "object",
-  "required": ["schemaVersion", "mode", "createdAt", "backend", "image", "layers", "fill", "warnings"],
+  "required": [
+    "schemaVersion",
+    "mode",
+    "createdAt",
+    "backend",
+    "image",
+    "layers",
+    "fill",
+    "warnings"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": {
+      "const": "1.0"
+    },
     "mode": {
       "description": "'layered' = real per-layer masks. 'preview' = degraded single flat layer (示意預覽), never a reconstruction.",
-      "enum": ["layered", "preview"]
+      "enum": [
+        "layered",
+        "preview"
+      ]
     },
-    "createdAt": { "type": "string" },
-    "backend": { "type": "string", "maxLength": 80, "description": "How ownership was decided, e.g. builtin:felzenszwalb+set-of-mark, http:sam2, preview." },
+    "createdAt": {
+      "type": "string"
+    },
+    "backend": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "How ownership was decided, e.g. builtin:felzenszwalb+set-of-mark, http:sam2, preview."
+    },
     "image": {
       "type": "object",
-      "required": ["width", "height"],
+      "required": [
+        "width",
+        "height"
+      ],
       "additionalProperties": false,
       "properties": {
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 }
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "layers": {
@@ -29,30 +58,122 @@
       "maxItems": 12,
       "items": {
         "type": "object",
-        "required": ["id", "name", "role", "order", "asset", "mask", "bbox", "coverage", "supportCoverage", "provenance"],
+        "required": [
+          "id",
+          "name",
+          "role",
+          "order",
+          "asset",
+          "mask",
+          "bbox",
+          "coverage",
+          "supportCoverage",
+          "provenance"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
-          "name": { "type": "string", "maxLength": 120 },
-          "role": { "enum": ["sky", "background", "midground", "foreground", "detail"] },
-          "order": { "type": "integer", "minimum": 0, "description": "0 = farthest; contiguous." },
-          "asset": { "type": "string", "description": "RGBA PNG at full source size: visible pixels + filled extension behind nearer layers." },
-          "mask": { "type": "string", "description": "L PNG (0/255): the pixels this layer owns in the source image." },
-          "bbox": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 4, "maxItems": 4, "description": "Box of the visible (owned) pixels." },
-          "supportBbox": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 4, "maxItems": 4, "description": "Box of the asset's opaque pixels." },
-          "coverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fraction of the image this layer owns." },
-          "supportCoverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fraction of the image opaque in the asset (owned + filled)." },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "role": {
+            "enum": [
+              "sky",
+              "background",
+              "midground",
+              "foreground",
+              "detail"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0 = farthest; contiguous."
+          },
+          "asset": {
+            "type": "string",
+            "description": "RGBA PNG at full source size: visible pixels + filled extension behind nearer layers."
+          },
+          "mask": {
+            "type": "string",
+            "description": "L PNG (0/255): the pixels this layer owns in the source image."
+          },
+          "bbox": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Box of the visible (owned) pixels."
+          },
+          "supportBbox": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Box of the asset's opaque pixels."
+          },
+          "coverage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of the image this layer owns."
+          },
+          "supportCoverage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Fraction of the image opaque in the asset (owned + filled)."
+          },
           "provenance": {
             "type": "object",
-            "required": ["source", "method", "confidence", "inpainted", "inpaintedFraction"],
+            "required": [
+              "source",
+              "method",
+              "confidence",
+              "inpainted",
+              "inpaintedFraction"
+            ],
             "additionalProperties": false,
             "properties": {
-              "source": { "enum": ["auto", "manual", "preview"] },
-              "method": { "type": "string", "maxLength": 120 },
-              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-              "inpainted": { "type": "boolean" },
-              "inpaintedFraction": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of the asset's opaque pixels that were filled, not taken from the source." },
-              "manualMask": { "type": "string", "description": "Copy of the user-supplied mask, when source is 'manual'." }
+              "source": {
+                "enum": [
+                  "auto",
+                  "manual",
+                  "preview"
+                ]
+              },
+              "method": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "inpainted": {
+                "type": "boolean"
+              },
+              "inpaintedFraction": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Share of the asset's opaque pixels that were filled, not taken from the source."
+              },
+              "manualMask": {
+                "type": "string",
+                "description": "Copy of the user-supplied mask, when source is 'manual'."
+              }
             }
           }
         }
@@ -61,13 +182,31 @@
     "fill": {
       "description": "How hidden areas behind nearer layers were completed.",
       "type": "object",
-      "required": ["method", "marginPx", "marginFraction"],
+      "required": [
+        "method",
+        "marginPx",
+        "marginFraction"
+      ],
       "additionalProperties": false,
       "properties": {
-        "method": { "type": "string" },
-        "marginPx": { "type": "integer", "minimum": 0, "description": "Each layer extends this far behind nearer layers. A camera/parallax motion that shifts layers relative to each other by more than this can reveal unfilled gaps." },
-        "marginFraction": { "type": "number", "minimum": 0, "maximum": 1, "description": "marginPx / long side of the image." },
-        "shadowBandPx": { "type": "integer", "minimum": 0 }
+        "method": {
+          "type": "string"
+        },
+        "marginPx": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Each layer extends this far behind nearer layers. A camera/parallax motion that shifts layers relative to each other by more than this can reveal unfilled gaps."
+        },
+        "marginFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "marginPx / long side of the image."
+        },
+        "shadowBandPx": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "labelling": {
@@ -75,31 +214,69 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "provider": { "type": "string" },
-        "model": { "type": "string" },
-        "attempts": { "type": "integer", "minimum": 1 },
-        "regions": { "type": "integer", "minimum": 0 },
-        "marked": { "type": "integer", "minimum": 0 },
-        "mergeThreshold": { "type": "number" },
-        "service": { "type": "string" },
-        "reused": { "type": "boolean", "description": "Ownership was reused from the previous run (only manual masks changed)." }
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "regions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "marked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mergeThreshold": {
+          "type": "number"
+        },
+        "service": {
+          "type": "string"
+        },
+        "reused": {
+          "type": "boolean",
+          "description": "Ownership was reused from the previous run (only manual masks changed)."
+        },
+        "refined": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Uncertain regions split and labelled again in a second round."
+        }
       }
     },
     "review": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
+      "additionalProperties": {
+        "type": "string"
+      },
       "description": "Images for a human to check the result (overlay, marks)."
     },
     "manualEdits": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["layer", "mask", "pixels"],
+        "required": [
+          "layer",
+          "mask",
+          "pixels"
+        ],
         "additionalProperties": false,
         "properties": {
-          "layer": { "type": "string" },
-          "mask": { "type": "string" },
-          "pixels": { "type": "integer", "minimum": 0 }
+          "layer": {
+            "type": "string"
+          },
+          "mask": {
+            "type": "string"
+          },
+          "pixels": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     },
@@ -108,10 +285,23 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "maxPolarAngle": { "type": "number", "minimum": 0, "maximum": 1.5708 },
-        "maxAzimuthAngle": { "type": "number", "minimum": 0, "maximum": 1.5708 }
+        "maxPolarAngle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.5708
+        },
+        "maxAzimuthAngle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.5708
+        }
       }
     },
-    "warnings": { "type": "array", "items": { "type": "string" } }
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   }
 }

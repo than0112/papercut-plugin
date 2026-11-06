@@ -1,5 +1,5 @@
 name: papercraft-3d
-version: "0.3.0"
+version: "0.3.1"
 description: >-
   Turn an AI-generated paper-cut / papercraft image into a layered, interactive
   Three.js 2.5D web scene, with a design spec that stays in sync with the

@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.3.0 (phase 3 of 7).** `papercraft_analyze` and
+> **Status: v0.3.1 (phase 3 of 7).** `papercraft_analyze` and
 > `papercraft_segment` work end to end. The later stages (scene building
 > onward) still return an explicit `not_implemented` error and never fake a
 > success. See [Roadmap](#roadmap).
@@ -160,15 +160,21 @@ The tests cover the following:
 ## How segmentation works
 
 1. **Regions on your machine.** Felzenszwalb graph segmentation runs on a
-   1024 px working copy and follows the paper cut lines. Adjacent regions with
-   similar colours are then merged, which joins gradients and soft cast shadows
-   to the paper they lie on. This leaves 40–120 significant regions, depending
-   on the number of layers.
+   1024 px working copy and follows the paper cut lines. A Ward-style
+   agglomerative merge then joins similar neighbours, cheapest first,
+   recomputing region means after every merge. This leaves 40–120 significant
+   regions, depending on the number of layers. A transitive threshold merge
+   was dropped: on a real image it chained pink sky, blossoms, snow and rock
+   into one region covering 50% of the picture.
 2. **Labels from your vision model (Set-of-Mark).** The model gets the original
    image and a copy with each region outlined and numbered, plus the layer plan
    from `analysis.json`. It answers "region 12 → `red_bridge`". The answer is
    validated, with one repair round. Small regions inherit the layer of the
    neighbour they share the longest border with.
+   **Second round:** regions the model marks as mixing layers (for example sky
+   showing between blossoms) are split into smaller parts along the original
+   fine segments. The model gets one more image with only those parts bright
+   and numbered (`review/refine_marks.png`).
 3. **Full-resolution edges.** The map is upsampled and the pixels on layer
    boundaries are reassigned by local colour similarity. Isolated specks are
    removed.
@@ -185,8 +191,9 @@ The tests cover the following:
    recorded as `manual`.
 
 Measured with perfect labels on the synthetic fixture at 480–2400 px wide, the
-pipeline reaches 98.5–98.9% pixel accuracy, with every layer's IoU at or above
-0.91. This measures the regions, edges and fill, not the model. On real images
+pipeline reaches 98.6–98.9% pixel accuracy, with every layer's IoU at or above
+0.90. Restacking the layers reproduces the source image pixel for pixel, and a
+test enforces this. This measures the regions, edges and fill, not the model. On real images
 the result depends on how well your vision model labels the regions, so always
 check `review/overlay.png`.
 

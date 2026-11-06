@@ -51,37 +51,62 @@ def _ground_truth(fixture_dir):
 class Oracle:
     """Fake labeller: answers each numbered region with its majority ground-truth layer."""
 
-    def __init__(self, fixture_dir, monkeypatch, *, drop_fraction=0.0, skip_layer=None):
-        self.gt = _ground_truth(fixture_dir)
+    def __init__(self, fixture_dir=None, monkeypatch=None, *, drop_fraction=0.0, skip_layer=None,
+                 gt=None, ids=None, flag_uncertain=False):
+        self.gt = gt if gt is not None else _ground_truth(fixture_dir)
+        self.ids = ids or LAYER_IDS
         self.regions = None
+        self.refined = None
         self.drop_fraction = drop_fraction
         self.skip_layer = skip_layer
-        real = seg.oversegment
+        self.flag_uncertain = flag_uncertain
+        real, real_sub = seg.oversegment, seg.subdivide
 
         def spy(work_rgb, **kw):
             self.regions = real(work_rgb, **kw)
             return self.regions
 
+        def spy_sub(regions, targets):
+            self.refined = real_sub(regions, targets)
+            return self.refined
+
         monkeypatch.setattr(seg, "oversegment", spy)
+        monkeypatch.setattr(seg, "subdivide", spy_sub)
+
+    def _gt_work(self, labels):
+        h, w = labels.shape  # work resolution: sample the ground truth there
+        return self.gt[(np.arange(h) * self.gt.shape[0] // h)][:, (np.arange(w) * self.gt.shape[1] // w)]
+
+    def _majority(self, gt_work, mask):
+        values = gt_work[mask]
+        counts = np.bincount(values[values >= 0], minlength=len(self.ids))
+        return int(counts.argmax()), counts.max() / max(1, counts.sum())
 
     def __call__(self, llm_call):
         assert [b["type"] for b in llm_call["input"]] == ["image", "image"], "original + marks image"
         assert llm_call["provider"] is None and llm_call["model"] is None
+        if llm_call["purpose"] == "papercraft.segment.refine":
+            refined, _, parts = self.refined
+            gt_work = self._gt_work(refined.labels)
+            answer = {str(i): self.ids[self._majority(gt_work, refined.labels == part)[0]]
+                      for i, part in enumerate(parts, start=1)}
+            return {"assignments": answer, "uncertain": []}
         r = self.regions
-        h, w = r.labels.shape  # work resolution: sample the ground truth there
-        gt_work = self.gt[(np.arange(h) * self.gt.shape[0] // h)][:, (np.arange(w) * self.gt.shape[1] // w)]
+        gt_work = self._gt_work(r.labels)
         assignments = {}
+        uncertain = []
         for region, number in r.numbers.items():
-            values = gt_work[r.labels == region]
-            layer = int(np.bincount(values[values >= 0]).argmax())
+            layer, purity = self._majority(gt_work, r.labels == region)
+            if self.flag_uncertain and purity < 0.95:
+                uncertain.append(number)
             if self.skip_layer is not None and layer == self.skip_layer:
                 layer = max(0, layer - 1)
-            assignments[str(number)] = LAYER_IDS[layer]
+            assignments[str(number)] = self.ids[layer]
         drop = int(len(assignments) * self.drop_fraction)
         # drop the largest regions first so the unlabelled AREA is large
         for number in [str(n) for n in range(1, drop + 1)]:
             assignments.pop(number, None)
-        return {"assignments": assignments, "uncertain": [], "notes": "oracle"}
+        return {"assignments": assignments, "uncertain": uncertain, "notes": "oracle"}
 
 
 def _project(tmp_path, fixture_dir, replies, **config):
@@ -127,6 +152,12 @@ def test_segment_end_to_end(tmp_path, fixture_dir, monkeypatch):
         assert np.array_equal(visible, owner == k), "mask = owned pixels"
         assert alpha[visible].all(), "every owned pixel is opaque in the asset"
     assert alphas[0].all(), "the back layer is never transparent"
+    source = Image.open(pdir / "source" / "source.png").convert("RGBA")
+    stack = Image.new("RGBA", source.size, (0, 0, 0, 255))
+    for layer in manifest["layers"]:
+        stack = Image.alpha_composite(stack, Image.open(pdir / layer["asset"]))
+    assert np.array_equal(np.asarray(stack)[..., :3], np.asarray(source)[..., :3]), \
+        "restacking the layers must reproduce the source exactly"
     assert all(not a.all() for a in alphas[1:]), "nearer layers are cut out, not copies of the image"
     fractions = [l["provenance"]["inpaintedFraction"] for l in manifest["layers"]]
     assert all(f > 0 for f in fractions[:-1]) and fractions[-1] == 0, fractions
@@ -332,3 +363,83 @@ def test_remove_islands():
     owner[:, 40:] = 1
     out = seg.remove_islands(owner, 2)
     assert out[20, 20] == 0 and (out[:, 40:] == 1).all()
+
+
+# --------------------------------------------------------------------------- refinement round
+
+
+def _same_colour_scene(tmp_path):
+    """Sky and blossoms of almost the same pink, separated only by a thin paper edge."""
+    from PIL import ImageDraw
+
+    w, h = 800, 500
+    img = Image.new("RGB", (w, h), (240, 160, 168))
+    gt = np.zeros((h, w), dtype=int)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 330, w, h], fill=(120, 115, 120))  # mountains
+    gt[330:, :] = 1
+    for cx, cy, r in ((90, 70, 70), (220, 40, 55), (700, 80, 80), (580, 30, 45)):
+        draw.ellipse([cx - r - 3, cy - r - 3, cx + r + 3, cy + r + 3], fill=(200, 120, 130))  # paper edge
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(244, 166, 174))  # blossom
+        yy, xx = np.ogrid[:h, :w]
+        gt[(yy - cy) ** 2 + (xx - cx) ** 2 <= (r + 3) ** 2] = 2
+    path = tmp_path / "pink.png"
+    img.save(path)
+    return path, gt
+
+
+def _pink_analysis():
+    layers = [
+        {"id": "sky", "name": "Sky", "role": "sky", "order": 0, "description": "pink sky", "bbox": [0, 0, 1, 0.66],
+         "depthEstimate": 0, "confidence": 0.9},
+        {"id": "hills", "name": "Hills", "role": "background", "order": 1, "description": "grey band",
+         "bbox": [0, 0.66, 1, 1], "depthEstimate": 0.5, "confidence": 0.9},
+        {"id": "blossoms", "name": "Blossoms", "role": "foreground", "order": 2, "description": "pink blossom discs",
+         "bbox": [0, 0, 1, 0.35], "depthEstimate": 1, "confidence": 0.9},
+    ]
+    return {"schemaVersion": "1.0", "subject": "test", "style": {"description": "t", "keywords": []},
+            "palette": [{"hex": "#f0a0a8", "role": "dominant"}],
+            "light": {"azimuthDeg": 0, "elevationDeg": 30, "colorTemperatureK": 5000, "softness": 0.5, "confidence": 0.5},
+            "camera": {"type": "orthographic", "reason": "t"}, "layers": layers,
+            "reconstruction": {"recommended": "2.5d", "notes": ""}, "confidence": {"overall": 0.5}, "needsReview": []}
+
+
+@pytest.mark.parametrize("flag", [False, True])
+def test_refinement_round_splits_mixed_regions(tmp_path, monkeypatch, flag):
+    from papercraft_hermes.core import segment_backends
+
+    path, gt = _same_colour_scene(tmp_path)
+    monkeypatch.setattr(segment_backends, "marks_for", lambda n: 3)  # force coarse, mixed regions
+    oracle = Oracle(monkeypatch=monkeypatch, gt=gt, ids=["sky", "hills", "blossoms"], flag_uncertain=flag)
+    llm = FakeLlm([_pink_analysis(), oracle, oracle])
+    ctx = FakeContext(config={"workspace_dir": str(tmp_path / "ws")}, llm=llm)
+    plugin.register(ctx)
+    pid = call(ctx, "papercraft_analyze", {"image_path": str(path)})["data"]["project_id"]
+    res = call(ctx, "papercraft_segment", {"project_id": pid})
+    assert res["ok"], res
+    owner = np.asarray(Image.open(tmp_path / "ws" / pid / "segmentation" / "owner.png")).astype(int)
+    blossom_iou = _iou(owner == 2, gt == 2)
+    purposes = [c["purpose"] for c in llm.calls]
+    if flag:
+        assert purposes.count("papercraft.segment.refine") == 1
+        assert res["data"]["labelling"]["refined"] >= 1
+        assert (tmp_path / "ws" / pid / "review" / "refine_marks.png").is_file()
+        assert blossom_iou > 0.9, blossom_iou
+    else:
+        assert "papercraft.segment.refine" not in purposes
+        assert blossom_iou < 0.6, "without a second round the mixed region stays wrong"
+
+
+def test_refinement_failure_keeps_first_round(tmp_path, monkeypatch):
+    from papercraft_hermes.core import segment_backends
+
+    path, gt = _same_colour_scene(tmp_path)
+    monkeypatch.setattr(segment_backends, "marks_for", lambda n: 3)
+    oracle = Oracle(monkeypatch=monkeypatch, gt=gt, ids=["sky", "hills", "blossoms"], flag_uncertain=True)
+    llm = FakeLlm([_pink_analysis(), oracle, RuntimeError("refine call down")])
+    ctx = FakeContext(config={"workspace_dir": str(tmp_path / "ws")}, llm=llm)
+    plugin.register(ctx)
+    pid = call(ctx, "papercraft_analyze", {"image_path": str(path)})["data"]["project_id"]
+    res = call(ctx, "papercraft_segment", {"project_id": pid})
+    assert res["ok"], res
+    assert any("refinement round failed" in w for w in res["warnings"])

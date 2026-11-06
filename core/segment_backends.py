@@ -28,12 +28,12 @@ from . import segmentation as seg
 from .analysis import prepare_model_image
 from .errors import ErrorCode, PaperCraftError
 
-LABEL_PROMPT_VERSION = "labels-v1"
+LABEL_PROMPT_VERSION = "labels-v2"
 MAX_LABEL_ATTEMPTS = 2
 MIN_LABELLED_AREA = 0.8  # fraction of the marked area the labeller must cover after repair
 HTTP_MAX_RESPONSE = 64 * 1024 * 1024
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
-COARSE_MERGE_LAB = 20.0  # a merge threshold above this means regions mix clearly different colours
+COARSE_MERGE_LAB = 30.0  # a merge threshold above this means regions mix clearly different colours
 
 
 def marks_for(n_layers: int) -> int:
@@ -73,13 +73,33 @@ Rules:
 - Decide by what the region shows in the original image, using the layer descriptions above.
 - A soft dark band right next to a paper edge is a cast shadow: it belongs to the paper it falls ON
   (the farther layer), not to the piece that casts it.
-- If a region clearly mixes two layers, choose the one covering most of it and list its number in
-  "uncertain".
+- If a region contains parts of two or more layers (for example sky showing between blossoms that
+  belong to a nearer layer), choose the layer covering most of it AND list its number in "uncertain".
+  Uncertain regions are split into smaller parts and shown to you again, so flag every mixed region.
 - Use only these layer ids: {ids}.
 
 Return one JSON object:
 {{"assignments": {{"1": "<layer id>", "2": "<layer id>", ...}}, "uncertain": [<numbers>], "notes": "<short>"}}
 It must contain all numbers from 1 to {len(numbers)}."""
+
+
+def refine_instructions(layers: list[dict[str, Any]], n_parts: int) -> str:
+    plan = "\n".join(f'- "{layer["id"]}" (order {layer["order"]}): {layer["name"]}. {layer["description"]}'
+                     for layer in layers)
+    ids = ", ".join(f'"{layer["id"]}"' for layer in layers)
+    return f"""Second pass of the same labelling task. Some regions mixed several depth layers, so they
+were split into smaller parts. Image 1 is the original. In image 2 everything else is darkened; only
+the parts to decide are bright, outlined and numbered 1 to {n_parts}.
+
+Assign EVERY numbered part to exactly one layer (order 0 = farthest):
+{plan}
+
+A soft dark band next to a paper edge is a cast shadow and belongs to the paper it falls on.
+Use only these layer ids: {ids}. List parts that still mix layers in "uncertain".
+
+Return one JSON object:
+{{"assignments": {{"1": "<layer id>", ...}}, "uncertain": [<numbers>], "notes": "<short>"}}
+It must contain all numbers from 1 to {n_parts}."""
 
 
 def parse_labels(data: Any, n_marks: int, layer_ids: list[str]) -> tuple[dict[int, int], list[int], list[str]]:
@@ -158,16 +178,55 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
                         f"{n_marks - len(by_number)} region(s) inherited a neighbour's layer")
 
     assignment = {number_to_region[n]: k for n, k in by_number.items()}
+    uncertain_regions = {number_to_region[n] for n in uncertain}
+
+    # Second round: split large uncertain regions and ask again about the parts only.
+    refine_info: dict[str, Any] = {}
+    review_images = {"marks": marks}
+    min_px = seg.REFINE_MIN_AREA * regions.labels.size
+    targets = sorted((r for r in uncertain_regions if regions.areas[r] >= min_px),
+                     key=lambda r: -regions.areas[r])[:seg.REFINE_MAX_REGIONS]
+    if targets:
+        refined, parent, parts = seg.subdivide(regions, targets)
+        if len(parts) >= 2:
+            refine_img = seg.render_refine_marks(work, refined, parts)
+            try:
+                second = provider.structured([(original, mime), (seg.png_bytes(refine_img), "image/png")],
+                                             instructions=refine_instructions(layers, len(parts)), timeout=timeout,
+                                             purpose="papercraft.segment.refine", schema_name="papercraft_region_labels",
+                                             max_tokens=3000)
+                part_labels, part_uncertain, part_problems = parse_labels(second.data, len(parts), layer_ids)
+                if log:
+                    log(attempt="refine", provider=second.provider, model=second.model,
+                        problems=part_problems[:10], raw=second.raw_text)
+            except PaperCraftError as exc:
+                part_labels, part_uncertain, part_problems = {}, [], [str(exc.message)]
+                warnings.append(f"refinement round failed ({exc.code.value}); first-round labels kept")
+            for target in targets:
+                assignment.pop(target, None)
+                uncertain_regions.discard(target)
+            for i, part in enumerate(parts, start=1):
+                fallback = by_number_for(number_to_region, by_number, parent[part])
+                if i in part_labels:
+                    assignment[part] = part_labels[i]
+                elif fallback is not None:
+                    assignment[part] = fallback
+                if i in part_uncertain or i not in part_labels:
+                    uncertain_regions.add(part)
+            regions = refined
+            review_images["refine_marks"] = refine_img
+            refine_info = {"regions": len(targets), "parts": len(parts), "labelled": len(part_labels),
+                           "problems": part_problems[:10]}
+
     work_map, how, per_region = seg.region_layer_map(regions, assignment)
     owner = seg.upsample_and_refine(work_map, rgba[..., :3], scale, len(layers))
     owner = np.where(rgba[..., 3] >= 128, owner, -1)
 
     # Confidence: area-weighted trust in how each region got its layer.
-    uncertain_regions = {number_to_region[n] for n in uncertain}
     weight = {"labelled": 1.0, "inherited": 0.6, "default": 0.2}
     num = np.zeros(len(layers))
     den = np.zeros(len(layers))
-    for r in range(len(regions.areas)):
+    for r in np.nonzero(regions.areas)[0]:
         k = int(per_region[r])
         w = weight[how[r]] * (0.5 if r in uncertain_regions else 1.0)
         num[k] += w * regions.areas[r]
@@ -181,14 +240,24 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
         "mergeThreshold": regions.merge_threshold,
         "assignments": {str(n): layer_ids[k] for n, k in sorted(by_number.items())},
         "uncertain": sorted(uncertain),
+        "refinement": refine_info,
         "notes": (result.data or {}).get("notes", "") if isinstance(result.data, dict) else "",
     }
     return BackendResult(
         owner=owner.astype(np.int16), confidence=confidence, method="builtin:felzenszwalb+set-of-mark",
         meta={"provider": result.provider, "model": result.model, "attempts": attempt,
-              "regions": record["regions"], "marked": n_marks, "mergeThreshold": regions.merge_threshold},
-        review_images={"marks": marks}, region_record=record, warnings=warnings,
+              "regions": record["regions"], "marked": n_marks, "mergeThreshold": regions.merge_threshold,
+              "refined": refine_info.get("regions", 0)},
+        review_images=review_images, region_record=record, warnings=warnings,
     )
+
+
+def by_number_for(number_to_region: dict[int, int], by_number: dict[int, int], region: int) -> int | None:
+    """First-round layer of ``region`` (None if it was not labelled)."""
+    for n, r in number_to_region.items():
+        if r == region:
+            return by_number.get(n)
+    return None
 
 
 # --------------------------------------------------------------------------- http
