@@ -20,18 +20,32 @@ node --version
 
 ## 測試 1：Plugin 安裝（第一階段起）
 
-用乾淨的 git checkout 測試（與 catalog CI 相同，避免掃描到 `node_modules`）：
+> **外掛所在位置**：Windows 是 `%LOCALAPPDATA%\hermes\plugins\papercraft-3d`，Linux/macOS 是 `~/.hermes/plugins/papercraft-3d`。下面的指令用 `$P` 代表這個路徑。
+
+由 Hermes 安裝（會放到正確位置並記錄來源）：
 
 ```bash
-git clone <repo-url> ~/.hermes/plugins/papercraft-3d
+hermes plugins install than0112/papercut-plugin --enable
 ```
 
-```bash
-hermes plugins validate ~/.hermes/plugins/papercraft-3d --install-deps
+Windows PowerShell 設定路徑變數：
+
+```powershell
+$P = "$env:LOCALAPPDATA\hermes\plugins\papercraft-3d"
 ```
 
+```powershell
+hermes plugins validate $P --install-deps
+```
+
+```powershell
+hermes plugins doctor $P --ci
+```
+
+**每次更新外掛**：執行下面指令後，**完全關閉並重開 Hermes（含 Desktop）**，舊程式才不會留在記憶體裡。工具回傳中的 `pluginVersion` 應等於最新版本。
+
 ```bash
-hermes plugins doctor ~/.hermes/plugins/papercraft-3d --ci
+hermes plugins update papercraft-3d
 ```
 
 ```bash
@@ -60,7 +74,7 @@ HERMES_PLUGINS_DEBUG=1 hermes plugins list
 
 ## 測試 2：圖片分析（第二階段）
 
-前置：外掛已更新到 v0.2.0（`git -C ~/.hermes/plugins/papercraft-3d pull`），Hermes 已設定可看圖的模型（`hermes model`）。
+前置：`hermes plugins update papercraft-3d` 並重啟 Hermes；工具回傳的 `pluginVersion` 為最新版；Hermes 已設定可看圖的模型（`hermes model`）。
 
 在 Hermes 對話中（附上一張紙雕圖）：
 
@@ -86,11 +100,7 @@ Get-Content "<project_dir>\logs\process.jsonl"
 
 ## 測試 2b：圖片分層（第三階段）
 
-前置：外掛更新到 v0.3.0 後，Hermes 會要求安裝新依賴（scipy、scikit-image），請同意。
-
-```powershell
-git -C "$env:USERPROFILE\.hermes\plugins\papercraft-3d" pull
-```
+前置：`hermes plugins update papercraft-3d`（v0.3.0 起需要新依賴 scipy、scikit-image，Hermes 會詢問，請同意），然後重啟 Hermes。
 
 在 Hermes 對話中，對已分析的專案：
 
@@ -114,7 +124,7 @@ git -C "$env:USERPROFILE\.hermes\plugins\papercraft-3d" pull
 ## 測試 3：3D 預覽（第三、四階段）
 
 ```bash
-cd ~/.hermes/plugins/papercraft-3d/viewer && npm install && npm run dev
+cd "$P\viewer"; npm install; npm run dev
 ```
 
 - [ ] 所有圖層資產載入、無嚴重透明排序錯誤

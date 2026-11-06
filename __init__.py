@@ -16,7 +16,7 @@ from .tools import ALL_TOOLS
 logger = logging.getLogger(__name__)
 
 TOOLSET = "papercraft"
-__version__ = "0.3.1"
+from .core.version import VERSION as __version__  # noqa: E402
 
 
 def _bind(module: Any, runtime: Runtime) -> Callable[..., str]:

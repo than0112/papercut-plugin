@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.3.1 (phase 3 of 7).** `papercraft_analyze` and
+> **Status: v0.3.2 (phase 3 of 7).** `papercraft_analyze` and
 > `papercraft_segment` work end to end. The later stages (scene building
 > onward) still return an explicit `not_implemented` error and never fake a
 > success. See [Roadmap](#roadmap).
@@ -57,17 +57,26 @@ codes include `image_format`, `image_too_large`, `model_unavailable`,
 
 Requirements: Hermes Agent `>=0.22`, Python ≥ 3.11, and Node ≥ 20.19 (viewer only).
 
+Let Hermes clone it into its own plugins folder. That folder is
+`%LOCALAPPDATA%\hermes\plugins` on Windows and `~/.hermes/plugins` on Linux
+and macOS.
+
 ```bash
-git clone <this-repo-url> ~/.hermes/plugins/papercraft-3d
+hermes plugins install than0112/papercut-plugin --enable
+```
+
+To update later, run the following, then **restart Hermes** (and Hermes Desktop) so the new code loads:
+
+```bash
+hermes plugins update papercraft-3d
 ```
 
 ```bash
-hermes plugins enable papercraft-3d
+hermes plugins list
 ```
 
-```bash
-hermes plugins doctor ~/.hermes/plugins/papercraft-3d --ci
-```
+Every tool result carries `pluginVersion`, so you can confirm which version is
+actually running.
 
 Python dependencies (`Pillow`, `numpy`, `jsonschema`, `scipy`, `scikit-image`)
 are declared in `pyproject.toml` with bounded ranges compatible with Hermes's

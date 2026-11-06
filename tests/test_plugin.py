@@ -75,6 +75,7 @@ def test_project_tools_report_missing_project(registered, tool):
     assert result == {
         "ok": False,
         "tool": tool,
+        "pluginVersion": plugin.__version__,
         "error": result["error"],
     }
     assert result["error"]["code"] == "project_not_found"

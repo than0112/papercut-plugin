@@ -21,6 +21,8 @@ import logging
 from enum import Enum
 from typing import Any, Callable
 
+from .version import VERSION
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,13 +81,14 @@ class PaperCraftError(Exception):
 
 def ok(tool: str, data: dict[str, Any], warnings: list[str] | None = None) -> str:
     return json.dumps(
-        {"ok": True, "tool": tool, "data": data, "warnings": warnings or []},
+        {"ok": True, "tool": tool, "pluginVersion": VERSION, "data": data, "warnings": warnings or []},
         ensure_ascii=False,
     )
 
 
 def fail(tool: str, err: PaperCraftError) -> str:
-    return json.dumps({"ok": False, "tool": tool, "error": err.to_dict()}, ensure_ascii=False)
+    return json.dumps({"ok": False, "tool": tool, "pluginVersion": VERSION, "error": err.to_dict()},
+                      ensure_ascii=False)
 
 
 def not_implemented(tool: str, phase: str) -> PaperCraftError:
