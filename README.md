@@ -8,10 +8,10 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.2.1 (phase 2 of 7).** `papercraft_analyze` works end to end
-> through Hermes's `ctx.llm`. The later stages (segmentation onward) still
-> return an explicit `not_implemented` error and never fake a success. See
-> [Roadmap](#roadmap).
+> **Status: v0.3.0 (phase 3 of 7).** `papercraft_analyze` and
+> `papercraft_segment` work end to end. The later stages (scene building
+> onward) still return an explicit `not_implemented` error and never fake a
+> success. See [Roadmap](#roadmap).
 
 ## How it works
 
@@ -40,7 +40,7 @@ file through Ajv). The design spec is rendered from it.
 | Tool | Purpose | Status |
 |---|---|---|
 | `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
-| `papercraft_segment` | 3–8 transparent layers + masks + `layers.json`. Inpaints revealed regions or limits the view angle. Fails rather than fakes, with an opt-in labelled *preview* mode | phase 3 |
+| `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
 | `papercraft_build_scene` | Compose layers into a schema-valid `scene.json` | phase 4 |
 | `papercraft_generate_plan` | `DESIGN_SPEC.md` rendered from `scene.json` | phase 5 |
 | `papercraft_update_scene` | Apply a validated JSON-Patch-style Scene Patch (the agent translates the user's words into it). Keeps history and updates the spec | phase 6 |
@@ -69,8 +69,9 @@ hermes plugins enable papercraft-3d
 hermes plugins doctor ~/.hermes/plugins/papercraft-3d --ci
 ```
 
-Python dependencies (`Pillow`, `numpy`, `jsonschema`) are declared in
-`pyproject.toml` within Hermes's core pins. Hermes asks for consent before it
+Python dependencies (`Pillow`, `numpy`, `jsonschema`, `scipy`, `scikit-image`)
+are declared in `pyproject.toml` with bounded ranges compatible with Hermes's
+core pins. Hermes asks for consent before it
 installs them. The full test procedure is in
 [`docs/HERMES_TEST_PLAN.md`](docs/HERMES_TEST_PLAN.md).
 
@@ -81,8 +82,9 @@ Settings go under `plugins.entries.papercraft-3d.settings` (the Desktop app also
 | Key | Default | Meaning |
 |---|---|---|
 | `workspace_dir` | plugin data dir | Where projects are written. Generated files never go into the plugin's install tree |
-| `segmentation_backend` | `local` | `local` (in-process, no network) or `http` (a service you configure) |
-| `segmentation_url` | — | HTTPS endpoint for the `http` backend |
+| `segmentation_backend` | `builtin` | `builtin` (regions computed locally, labelled by your Hermes vision model) or `http` (your own service, see [docs/SEGMENTATION_HTTP.md](docs/SEGMENTATION_HTTP.md)) |
+| `segmentation_url` | — | `https://`, or `http://` on localhost, for the `http` backend |
+| `segmentation_timeout_s` | `300` | Timeout for the `http` backend |
 | `max_image_mb` | `10` | Upload limit (hard-capped at 10 MB in the MVP) |
 | `analysis_timeout_s` | `180` | Timeout per vision-model call (10–600 s) |
 
@@ -155,6 +157,39 @@ The tests cover the following:
 5. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
    attempt is logged in `logs/process.jsonl`.
 
+## How segmentation works
+
+1. **Regions on your machine.** Felzenszwalb graph segmentation runs on a
+   1024 px working copy and follows the paper cut lines. Adjacent regions with
+   similar colours are then merged, which joins gradients and soft cast shadows
+   to the paper they lie on. This leaves 40–120 significant regions, depending
+   on the number of layers.
+2. **Labels from your vision model (Set-of-Mark).** The model gets the original
+   image and a copy with each region outlined and numbered, plus the layer plan
+   from `analysis.json`. It answers "region 12 → `red_bridge`". The answer is
+   validated, with one repair round. Small regions inherit the layer of the
+   neighbour they share the longest border with.
+3. **Full-resolution edges.** The map is upsampled and the pixels on layer
+   boundaries are reassigned by local colour similarity. Isolated specks are
+   removed.
+4. **Hidden-area fill.** The farthest layer is completed everywhere. Every
+   other layer except the nearest is extended 5% of the image's long side
+   behind nearer layers, and the extension is filled by push-pull interpolation
+   from the layer's own pixels, skipping the cast-shadow band. Owned pixels are
+   never changed. `fill.marginPx` tells the scene builder how far layers may
+   shift relative to each other before an unfilled gap could show.
+5. **Review and correct.** `review/overlay.png` (colour-coded layers) and
+   `review/marks.png` (what the model saw) are written. To fix a layer, paint a
+   mask and call `papercraft_segment` again with `manual_masks`. The previous
+   ownership is reused without calling the model again, and the layer is
+   recorded as `manual`.
+
+Measured with perfect labels on the synthetic fixture at 480–2400 px wide, the
+pipeline reaches 98.5–98.9% pixel accuracy, with every layer's IoU at or above
+0.91. This measures the regions, edges and fill, not the model. On real images
+the result depends on how well your vision model labels the regions, so always
+check `review/overlay.png`.
+
 ## Security & privacy
 
 - **No API keys in the plugin.** Image analysis runs through Hermes's
@@ -182,7 +217,7 @@ the same planes.
 
 1. ✅ Plugin skeleton: manifest, registration, schemas, security, tests, viewer scaffold
 2. ✅ Image analysis (`ctx.llm` vision → `analysis.json`)
-3. ⬜ Layer conversion (masks, transparent layers, inpainting / view limits)
+3. ✅ Layer conversion (masks, transparent layers, hidden-area fill, manual corrections)
 4. ⬜ Three.js scene builder (`scene.json`) + `shape`/`extrude` geometry
 5. ⬜ Design spec generator
 6. ⬜ Natural-language Scene Patch (`papercraft_update_scene`)

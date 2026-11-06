@@ -24,4 +24,7 @@ Do not invent other APIs; check `website/docs/developer-guide/plugins/index.md` 
 - `schemas/scene.schema.json` is the contract. Update `viewer/src/types/scene.ts` together with it.
 - The pytest rootdir is `tests/`, because the repo root is a package with relative imports. Run `.venv/bin/python -m pytest tests`.
 - Viewer commands: `cd viewer && npm run build` (runs tsc and vite).
+- Segmentation runs Felzenszwalb, then a RAG merge, then Set-of-Mark labelling via ctx.llm, then refinement, then push-pull fill (`core/segmentation.py`, `core/segment_backends.py`).
+  The tests use an oracle labeller that reads the fixture's ground truth, so they measure the pipeline and not the model.
+- The fixture's shadow and highlight sizes scale with the image width. Keep them that way, or accuracy tests at small sizes become unrealistic.
 - Regenerate the fixture with `python3 examples/make_synthetic_fixture.py viewer/public/scenes/fixture`. The output is deterministic.

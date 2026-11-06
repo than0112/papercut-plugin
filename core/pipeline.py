@@ -99,6 +99,18 @@ class Runtime:
             seconds = 180.0
         return max(10.0, min(seconds, 600.0))
 
+    @property
+    def segmentation_backend(self) -> str:
+        return str(self.config("segmentation_backend", "builtin"))
+
+    @property
+    def segmentation_timeout(self) -> float:
+        try:
+            seconds = float(self.config("segmentation_timeout_s", 300))
+        except (TypeError, ValueError):
+            seconds = 300.0
+        return max(10.0, min(seconds, 1800.0))
+
     def analysis_provider(self) -> Any:
         if self.analysis_provider_override is not None:
             return self.analysis_provider_override

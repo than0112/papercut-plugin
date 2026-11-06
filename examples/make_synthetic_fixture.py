@@ -45,8 +45,9 @@ def _layer_from_polygon(size: tuple[int, int], top: list[tuple[float, float]], c
 def _edge_highlight(img: Image.Image) -> Image.Image:
     """Lighten a thin band along the upper edge, like light catching a paper cut."""
     alpha = img.getchannel("A")
-    shifted = ImageChops.offset(alpha, 0, 4)
-    band = ImageChops.subtract(alpha, shifted).filter(ImageFilter.GaussianBlur(1.5))
+    k = img.width / 1200  # effects scale with the image, like a photo of real paper
+    shifted = ImageChops.offset(alpha, 0, max(1, round(4 * k)))
+    band = ImageChops.subtract(alpha, shifted).filter(ImageFilter.GaussianBlur(1.5 * k))
     white = Image.new("RGBA", img.size, (255, 255, 255, 0))
     white.putalpha(band.point(lambda v: int(v * 0.35)))
     return Image.alpha_composite(img, white)
@@ -95,7 +96,9 @@ def flatten(layers: list[dict]) -> Image.Image:
     for layer in layers[1:]:
         alpha = layer["image"].getchannel("A")
         shadow = Image.new("RGBA", out.size, (40, 20, 20, 0))
-        shadow.putalpha(ImageChops.offset(alpha, 6, -8).filter(ImageFilter.GaussianBlur(9)).point(lambda v: int(v * 0.45)))
+        k = out.width / 1200  # shadow size scales with the image
+        shadow.putalpha(ImageChops.offset(alpha, round(6 * k), round(-8 * k))
+                        .filter(ImageFilter.GaussianBlur(9 * k)).point(lambda v: int(v * 0.45)))
         out = Image.alpha_composite(out, shadow)
         out = Image.alpha_composite(out, layer["image"])
     return out

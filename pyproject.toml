@@ -1,6 +1,6 @@
 [project]
 name = "papercraft-3d"
-version = "0.2.1"
+version = "0.3.0"
 description = "Hermes Agent plugin: AI paper-cut image to interactive Three.js 2.5D scene, with synced design spec."
 readme = "README.md"
 license = "MIT"
@@ -8,9 +8,11 @@ requires-python = ">=3.11"
 # Bounded ranges that include Hermes's own pins (Pillow 13.0.0, numpy 2.5.x),
 # so the plugin resolves inside Hermes's core constraints.
 dependencies = [
-    "Pillow>=10.0,<14",
+    "Pillow>=10.1,<14",
     "numpy>=1.26,<3",
     "jsonschema>=4.18,<5",
+    "scipy>=1.11,<2",
+    "scikit-image>=0.24,<0.28",
 ]
 
 [dependency-groups]

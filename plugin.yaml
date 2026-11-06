@@ -1,5 +1,5 @@
 name: papercraft-3d
-version: "0.2.1"
+version: "0.3.0"
 description: >-
   Turn an AI-generated paper-cut / papercraft image into a layered, interactive
   Three.js 2.5D web scene, with a design spec that stays in sync with the
@@ -33,15 +33,22 @@ config_schema:
       directory (<hermes home>/plugin-data/papercraft-3d/projects).
   segmentation_backend:
     type: str
-    default: "local"
-    choices: [local, http]
+    default: "builtin"
+    choices: [builtin, http]
     description: >-
-      'local' = built-in mask generation from the analysis plan (no network).
-      'http' = a segmentation service you run or trust (see segmentation_url).
+      'builtin' = regions computed on this machine, labelled by your Hermes vision model.
+      'http' = a segmentation service you run or trust (see segmentation_url and
+      docs/SEGMENTATION_HTTP.md).
   segmentation_url:
     type: str
     default: ""
-    description: HTTPS endpoint of your segmentation service (only used when backend is 'http').
+    description: >-
+      Endpoint of your segmentation service (backend 'http' only). https://, or http:// on
+      localhost / 127.0.0.1 for a service on this machine.
+  segmentation_timeout_s:
+    type: int
+    default: 300
+    description: Timeout in seconds for the segmentation service (backend 'http', 10-1800).
   max_image_mb:
     type: int
     default: 10

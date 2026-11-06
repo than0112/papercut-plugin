@@ -6,12 +6,11 @@ import copy
 import io
 import json
 import re
-from dataclasses import dataclass, field
 
 import pytest
 from PIL import Image
 
-from conftest import FakeContext, call, plugin
+from conftest import FakeContext, FakeLlm, call, plugin
 
 GOOD = {
     "schemaVersion": "1.0",
@@ -44,51 +43,6 @@ GOOD = {
     "confidence": {"overall": 0.75, "layering": 0.8},
     "needsReview": [],
 }
-
-
-@dataclass
-class Usage:
-    input_tokens: int = 1200
-    output_tokens: int = 800
-    total_tokens: int = 2000
-
-
-@dataclass
-class StructuredResult:  # mirrors agent.plugin_llm.PluginLlmStructuredResult
-    text: str
-    provider: str
-    model: str
-    agent_id: str = "default"
-    usage: Usage = field(default_factory=Usage)
-    parsed: object = None
-    content_type: str = "text"
-    audit: dict = field(default_factory=dict)
-
-
-class FakeLlm:
-    """Scripted replies; parsing follows Hermes's json_mode behaviour (fence strip + json.loads)."""
-
-    def __init__(self, replies):
-        self.replies = list(replies)
-        self.calls: list[dict] = []
-
-    def complete_structured(self, *, instructions, input, json_schema=None, json_mode=False, schema_name=None,
-                            system_prompt=None, provider=None, model=None, temperature=None, max_tokens=None,
-                            timeout=None, agent_id=None, profile=None, purpose=None, task=None):
-        self.calls.append(dict(instructions=instructions, input=input, json_schema=json_schema,
-                               json_mode=json_mode, provider=provider, model=model, timeout=timeout,
-                               purpose=purpose))
-        reply = self.replies.pop(0)
-        if isinstance(reply, BaseException):
-            raise reply
-        text = reply if isinstance(reply, str) else json.dumps(reply)
-        match = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
-        try:
-            parsed, ctype = json.loads(match.group(1) if match else text), "json"
-        except ValueError:
-            parsed, ctype = None, "text"
-        return StructuredResult(text=text, provider="openrouter", model="vision-test", parsed=parsed,
-                                content_type=ctype)
 
 
 def _ctx(tmp_path, replies, **config):

@@ -6,11 +6,8 @@ Analysis
     vision routing. The image only goes to the provider the user already
     chose for Hermes; this plugin holds no API keys.
 
-Segmentation
-    ``local``  in-process mask generation from the analysis plan (no network).
-    ``http``   a service the user configures explicitly (``segmentation_url``).
-    Both are implemented in phase 3. Until then they raise
-    ``SEGMENTATION_FAILED`` / ``NOT_IMPLEMENTED`` honestly.
+Segmentation backends live in ``core.segment_backends``; the built-in one uses
+``structured()`` here to have the vision model label numbered regions.
 
 Everything a model returns is untrusted: callers must validate it against the
 JSON Schemas before use (see ``core.schemas.validate``).
@@ -21,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from .errors import ErrorCode, PaperCraftError, not_implemented
+from .errors import ErrorCode, PaperCraftError
 
 
 @dataclass
@@ -54,6 +51,12 @@ class HermesLlmAnalysisProvider:
         self._llm = llm
 
     def analyze(self, image_bytes: bytes, mime_type: str, *, instructions: str, timeout: float) -> AnalysisResult:
+        return self.structured([(image_bytes, mime_type)], instructions=instructions, timeout=timeout,
+                               purpose="papercraft.analyze", schema_name="papercraft_analysis")
+
+    def structured(self, images: list[tuple[bytes, str]], *, instructions: str, timeout: float,
+                   purpose: str, schema_name: str, max_tokens: int = 12000) -> AnalysisResult:
+        """One JSON-mode call with one or more images; the reply is returned unvalidated."""
         if self._llm is None:
             raise PaperCraftError(
                 ErrorCode.MODEL_UNAVAILABLE,
@@ -62,13 +65,13 @@ class HermesLlmAnalysisProvider:
         try:
             result = self._llm.complete_structured(
                 instructions=instructions,
-                input=[{"type": "image", "data": image_bytes, "mime_type": mime_type}],
+                input=[{"type": "image", "data": data, "mime_type": mime} for data, mime in images],
                 json_mode=True,
-                schema_name="papercraft_analysis",
+                schema_name=schema_name,
                 temperature=0.2,
-                max_tokens=12000,
+                max_tokens=max_tokens,
                 timeout=timeout,
-                purpose="papercraft.analyze",
+                purpose=purpose,
             )
         except TimeoutError as exc:
             raise PaperCraftError(ErrorCode.TIMEOUT, f"Vision model timed out after {timeout:.0f}s.") from exc
@@ -88,41 +91,3 @@ class HermesLlmAnalysisProvider:
             usage={k: v for k, v in vars(usage).items() if isinstance(v, (int, float))}
             if usage is not None and hasattr(usage, "__dict__") else {},
         )
-
-
-class SegmentationProvider(Protocol):
-    name: str
-
-    def segment(self, image_path: str, analysis: dict[str, Any], *, max_layers: int, timeout: float) -> Any: ...
-
-
-class LocalSegmentationProvider:
-    name = "local"
-
-    def segment(self, image_path: str, analysis: dict[str, Any], *, max_layers: int, timeout: float) -> Any:
-        raise not_implemented("papercraft_segment", "phase 3: layer conversion")
-
-
-class HttpSegmentationProvider:
-    name = "http"
-
-    def __init__(self, url: str) -> None:
-        if not url.startswith("https://"):
-            raise PaperCraftError(
-                ErrorCode.INVALID_ARGUMENT,
-                "segmentation_url must be an https:// URL you configured explicitly.",
-            )
-        self.url = url
-
-    def segment(self, image_path: str, analysis: dict[str, Any], *, max_layers: int, timeout: float) -> Any:
-        raise not_implemented("papercraft_segment", "phase 3: layer conversion")
-
-
-def make_segmentation_provider(backend: str, url: str = "") -> SegmentationProvider:
-    if backend == "local":
-        return LocalSegmentationProvider()
-    if backend == "http":
-        return HttpSegmentationProvider(url)
-    raise PaperCraftError(
-        ErrorCode.INVALID_ARGUMENT, f"Unknown segmentation_backend {backend!r} (use 'local' or 'http')."
-    )

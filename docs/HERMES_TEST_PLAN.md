@@ -84,6 +84,33 @@ Get-Content "<project_dir>\logs\process.jsonl"
 - [ ] 有 `confidence` 與 `needsReview`
 - [ ] 回應中不會宣稱已經產生尚未存在的資產
 
+## 測試 2b：圖片分層（第三階段）
+
+前置：外掛更新到 v0.3.0 後，Hermes 會要求安裝新依賴（scipy、scikit-image），請同意。
+
+```powershell
+git -C "$env:USERPROFILE\.hermes\plugins\papercraft-3d" pull
+```
+
+在 Hermes 對話中，對已分析的專案：
+
+> 用 papercraft_segment 把專案 <project_id> 分層，完成後告訴我每層的覆蓋率、補全比例、信心值，以及檢查用圖片的路徑。
+
+- [ ] `layers.json` 存在，`mode` 為 `layered`
+- [ ] `assets/` 中每層是**全尺寸透明 PNG**；除最遠層外都有透明區（不是原圖複製）
+- [ ] 打開 `review/overlay.png`：顏色分區是否符合各物件（橋、白狐、木屋、櫻花框景…）
+- [ ] 打開 `review/marks.png`：數字是否清楚可讀
+- [ ] `source/` 原圖未被修改
+
+修正測試：用小畫家等工具，畫一張與原圖同尺寸的黑底圖，把某個分錯的區域塗白，然後：
+
+> 用 papercraft_segment 對專案 <project_id> 套用 manual_masks：{"<layer_id>": "<遮罩路徑>"}
+
+- [ ] 不會再呼叫模型（很快完成）
+- [ ] 該層 provenance 為 `manual`，`layers.json` 有 `manualEdits`
+
+失敗測試：關閉網路後呼叫一次 → 應回傳錯誤；加上 `allow_preview_fallback: true` → 應回傳 `mode: preview` 並明確說明「示意預覽」。
+
 ## 測試 3：3D 預覽（第三、四階段）
 
 ```bash
