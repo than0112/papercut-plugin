@@ -17,6 +17,35 @@ export default function App() {
   const [state, setState] = useState<State>({ status: "loading" });
   const resetAll = useViewer((s) => s.resetAll);
 
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Live reload: poll scene.json; when papercraft_update_scene writes a new revision,
+  // validate and swap it in without resetting the viewer's UI state.
+  const loadedVersion = state.status === "ready"
+    ? `${state.loaded.scene.generator?.revision ?? 0}|${state.loaded.scene.generator?.updatedAt ?? ""}`
+    : null;
+  useEffect(() => {
+    if (loadedVersion === null) return;
+    const url = sceneUrl();
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await fetch(new URL(url, window.location.href), { cache: "no-store" });
+        if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) return;
+        const data = await res.json();
+        const version = `${data?.generator?.revision ?? 0}|${data?.generator?.updatedAt ?? ""}`;
+        if (version === loadedVersion) return;
+        const loaded = await loadScene(url); // full schema validation again
+        setState({ status: "ready", loaded });
+        useViewer.getState().setPreset(null); // show the edited scene lighting, not a preset picked in the UI
+        setNotice(`已更新至 rev ${loaded.scene.generator?.revision ?? 0}`);
+        window.setTimeout(() => setNotice(null), 3500);
+      } catch {
+        /* keep showing the last valid scene */
+      }
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [loadedVersion]);
+
   useEffect(() => {
     let cancelled = false;
     loadScene(sceneUrl())
@@ -61,6 +90,7 @@ export default function App() {
       <header className="topbar">
         <strong>PaperCraft 3D</strong>
         <span className="scene-name">{scene.name}</span>
+        {notice && <span className="notice" role="status">{notice}</span>}
         <span className="badge">rev {scene.generator?.revision ?? 0}</span>
       </header>
       {scene.mode === "preview" && (

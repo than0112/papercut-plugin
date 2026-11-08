@@ -61,6 +61,9 @@ def scene_semantic_errors(scene: dict[str, Any], base_dir: Path | None = None) -
         problems.append("layers: layer ids must be unique")
     if len(set(orders)) != len(orders):
         problems.append("layers: layer order values must be unique")
+    by_order = sorted(layers, key=lambda layer: layer["order"])
+    if any(b["depth"] <= a["depth"] for a, b in zip(by_order, by_order[1:])):
+        problems.append("layers: depth must increase with order (nearer layers in front)")
     for i, layer in enumerate(layers):
         if layer.get("geometry", {}).get("type") in ("shape", "extrude") and "outline" not in layer["geometry"]:
             problems.append(f"layers/{i}/geometry: '{layer['geometry']['type']}' needs an outline file")

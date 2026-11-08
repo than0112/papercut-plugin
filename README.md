@@ -8,10 +8,10 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.5.0 (phase 5 of 7).** Analysis, segmentation, scene building
-> and the design spec work end to end. Scene editing and export still return
-> an explicit `not_implemented` error and never fake a success. See
-> [Roadmap](#roadmap).
+> **Status: v0.6.0 (phase 6 of 7).** Analysis, segmentation, scene building,
+> the design spec and natural-language scene editing work end to end. Export
+> still returns an explicit `not_implemented` error and never fakes a success.
+> See [Roadmap](#roadmap).
 
 ## How it works
 
@@ -43,7 +43,7 @@ file through Ajv). The design spec is rendered from it.
 | `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
 | `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
 | `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–F) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
-| `papercraft_update_scene` | Apply a validated JSON-Patch-style Scene Patch (the agent translates the user's words into it). Keeps history and updates the spec | phase 6 |
+| `papercraft_update_scene` | Validated, atomic Scene Patch from a request in plain language. Protected paths, layers addressable by id, `$preset`, safety-bound rebalancing, history with `revert_to`, `dry_run`, spec and change log updated, live viewer reload | ✅ phase 6 |
 | `papercraft_export_project` | Standalone, relative-path Vite + Three.js project | phase 7 |
 
 Every tool returns a JSON envelope: `{"ok": true, "data": …, "warnings": […]}` or
@@ -204,6 +204,32 @@ and Markdown files inside it.
   bright and close to its colour glow. The box itself never glows.
   `emissiveScale` makes lights brighter at night.
 
+## Editing a scene in plain language
+
+The agent turns the request into JSON Patch operations, and `papercraft_update_scene` handles the rest:
+
+- **Validation.** Every path must be on an allow-list: lighting, presets,
+  interaction, rendering, camera zoom and tilt, and layer depth, parallax and
+  material. Assets, masks, the source image, ids, provenance and derived data
+  are protected. The whole patch is checked against the scene schema and the
+  semantic rules, and a failure writes nothing.
+- **Conveniences.** Layers can be addressed by id (`/layers/red_bridge/depth`).
+  `{"$preset": "night"}` copies a preset. Using `replace` on an optional field
+  that is not set yet is treated as `add`.
+- **Consistency.** If only the key colour changes, its stale colour temperature
+  is dropped. Edited lighting is labelled `custom`.
+- **Safety bounds.** If the edit would let layers shift past the filled margin,
+  the plugin lowers whichever of tilt or parallax the user did not ask for, and
+  reports it. If both were requested explicitly, the edit is refused with the
+  numbers, unless `respect_limits=false`.
+- **History.** Before each change the previous scene is saved as
+  `history/scene.rev<N>.json`, and `history/patches.jsonl` records the request,
+  the operations, the diff and any adjustments. `revert_to` restores an older
+  revision as a new one.
+- **Spec and viewer.** `DESIGN_SPEC.md` is regenerated and gains section G
+  (change log). An open viewer polls `scene.json` and reloads within about
+  2 seconds.
+
 ## How segmentation works
 
 1. **Regions on your machine.** Felzenszwalb graph segmentation runs on a
@@ -274,7 +300,7 @@ the same planes.
 3. ✅ Layer conversion (masks, transparent layers, hidden-area fill, manual corrections)
 4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
 5. ✅ Design spec generator (zh-TW / en, verified against scene.json)
-6. ⬜ Natural-language Scene Patch (`papercraft_update_scene`)
+6. ✅ Natural-language Scene Patch (`papercraft_update_scene`), with a live-reloading viewer
 7. ⬜ Export, test report, demo, catalog PR
 
 ## 中文摘要

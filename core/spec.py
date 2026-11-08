@@ -23,7 +23,8 @@ from typing import Any
 from .version import VERSION
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-SECTIONS = ("A", "B", "C", "D", "E", "F")
+SECTIONS = ("A", "B", "C", "D", "E", "F", "G")
+REQUIRED = ("A", "B", "C", "D", "E", "F")  # G (change log) is added to older specs automatically
 FINGERPRINT_RE = re.compile(r"<!-- papercraft-spec: scene-sha256=([0-9a-f]{64}) revision=(\d+) -->")
 AUTO_RE = re.compile(r"<!-- auto:([A-Z]) -->.*?<!-- /auto:\1 -->", re.S)
 
@@ -62,10 +63,9 @@ T = {
         "limits_general": ["透明圖層構成的 2.5D 場景只有正面；不是具備背面拓樸的完整 3D 模型。",
                            "原圖中畫好的陰影是固定的，前景移動時不會跟著移動。",
                            "被遮住的區域以補全產生，並非原圖實際內容。"],
-        "next_items": ["以自然語言修改場景（papercraft_update_scene，第六階段）",
-                       "獨立網頁專案匯出與部署（第七階段）",
+        "next_items": ["獨立網頁專案匯出與部署（第七階段）",
                        "shape / extrude 幾何：依遮罩輪廓建立具厚度的紙片"],
-        "sep": "；", "mparallax": "滑鼠視差", "tool_warnings": "工具回報的警告（原文）", "notes": "備註", "notes_hint": "此段以下的內容在重新產生時會保留。",
+        "G": "G. 變更紀錄", "rev": "版本", "time": "時間", "request": "要求", "changes": "變更", "adjust": "自動調整", "no_changes": "尚無修改（第 0 版由 papercraft_build_scene 建立）。", "sep": "；", "mparallax": "滑鼠視差", "tool_warnings": "工具回報的警告（原文）", "notes": "備註", "notes_hint": "此段以下的內容在重新產生時會保留。",
     },
     "en": {
         "title": "Design & Implementation Spec", "project": "Project", "revision": "Scene revision", "mode": "Mode",
@@ -101,10 +101,9 @@ T = {
         "limits_general": ["A scene of transparent layers is 2.5D: front faces only, not a 3D model with back-face topology.",
                            "Shadows painted into the source art are fixed and do not move with the layers.",
                            "Areas hidden behind nearer layers are filled in, not original image content."],
-        "next_items": ["Natural-language scene edits (papercraft_update_scene, phase 6)",
-                       "Standalone web export and deployment (phase 7)",
+        "next_items": ["Standalone web export and deployment (phase 7)",
                        "shape / extrude geometry: paper pieces with thickness from the mask outlines"],
-        "sep": "; ", "mparallax": "Mouse parallax", "tool_warnings": "Warnings reported by the tools", "notes": "Notes", "notes_hint": "Content below this line is kept when the spec is regenerated.",
+        "G": "G. Change log", "rev": "Revision", "time": "Time", "request": "Request", "changes": "Changes", "adjust": "Adjustments", "no_changes": "No edits yet (revision 0 was built by papercraft_build_scene).", "sep": "; ", "mparallax": "Mouse parallax", "tool_warnings": "Warnings reported by the tools", "notes": "Notes", "notes_hint": "Content below this line is kept when the spec is regenerated.",
     },
 }
 
@@ -226,9 +225,9 @@ def _lighting_rows(t: dict, L: dict) -> list[list[Any]]:
 
 
 def section_c(t: dict, scene: dict, analysis: dict) -> str:
-    parts = [f"## {t['C']}", f"{t['active']}: **{scene['lighting'].get('preset', 'custom')}**"]
-    presets = scene.get("lightingPresets") or {"scene": scene["lighting"]}
-    for name, L in presets.items():
+    parts = [f"## {t['C']}", f"{t['active']}: **{scene['lighting'].get('preset', 'custom')}**",
+             _table(["", t["color"], t["intensity"]], _lighting_rows(t, scene["lighting"]))]
+    for name, L in (scene.get("lightingPresets") or {}).items():
         parts += [f"### {t['preset']}: {name}", _table(["", t["color"], t["intensity"]], _lighting_rows(t, L))]
     light = analysis["light"]
     parts += [f"### {t['analysed']}",
@@ -320,6 +319,17 @@ def section_f(t: dict, scene: dict, project_dir: Path, warnings: list[str]) -> s
     ])
 
 
+def section_g(t: dict, project_dir: Path) -> str:
+    log = project_dir / "history" / "patches.jsonl"
+    entries = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip()] if log.is_file() else []
+    if not entries:
+        return f"## {t['G']}\n\n{t['no_changes']}"
+    rows = [[e["revision"], e["at"], e.get("instruction", ""),
+             "<br>".join(f"`{d['path']}`" for d in e.get("diff", []))[:600] or e.get("kind", ""),
+             "<br>".join(e.get("adjustments", [])) or "—"] for e in entries]
+    return f"## {t['G']}\n\n" + _table([t["rev"], t["time"], t["request"], t["changes"], t["adjust"]], rows)
+
+
 # --------------------------------------------------------------------------- document
 
 
@@ -344,6 +354,7 @@ def render(scene: dict, analysis: dict, manifest: dict, project_meta: dict, proj
         "D": section_d(t, scene),
         "E": section_e(t, scene),
         "F": section_f(t, scene, project_dir, warnings),
+        "G": section_g(t, project_dir),
         "notes": f"## {t['notes']}\n\n<!-- {t['notes_hint']} -->\n",
     }
 
@@ -351,8 +362,13 @@ def render(scene: dict, analysis: dict, manifest: dict, project_meta: dict, proj
 def assemble(parts: dict[str, str], existing: str | None) -> tuple[str, bool]:
     """Full document. With an existing spec, replace only the header fingerprint and auto blocks."""
     blocks = {k: f"<!-- auto:{k} -->\n{parts[k]}\n<!-- /auto:{k} -->" for k in SECTIONS}
-    if existing and all(f"<!-- auto:{k} -->" in existing and f"<!-- /auto:{k} -->" in existing for k in SECTIONS):
+    if existing and all(f"<!-- auto:{k} -->" in existing and f"<!-- /auto:{k} -->" in existing for k in REQUIRED):
         out = AUTO_RE.sub(lambda m: blocks[m.group(1)] if m.group(1) in blocks else m.group(0), existing)
+        for k in SECTIONS:  # sections added in later versions go after the last existing one
+            if f"<!-- auto:{k} -->" not in out:
+                last = max(out.rindex(f"<!-- /auto:{j} -->") + len(f"<!-- /auto:{j} -->")
+                           for j in SECTIONS if f"<!-- /auto:{j} -->" in out)
+                out = out[:last] + "\n\n" + blocks[k] + out[last:]
         head_end = out.index("<!-- auto:A -->")
         return parts["head"] + "\n\n" + out[head_end:], True
     body = "\n\n".join(blocks[k] for k in SECTIONS)
@@ -380,7 +396,7 @@ def verify_spec(markdown: str, scene: dict) -> list[str]:
     tilt = f"({fmt(scene['camera'].get('maxPolarAngle', 0))} rad)"
     if tilt not in markdown:
         problems.append(f"camera tilt {tilt} not found")
-    for name, L in (scene.get("lightingPresets") or {}).items():
+    for name, L in [("active", scene["lighting"]), *(scene.get("lightingPresets") or {}).items()]:
         if f"`{L['key']['color']}`" not in markdown or fmt(L["key"]["intensity"]) not in markdown:
             problems.append(f"preset {name}: key light not documented as in scene.json")
     m = FINGERPRINT_RE.search(markdown)

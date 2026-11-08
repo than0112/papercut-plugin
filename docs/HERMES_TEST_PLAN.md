@@ -160,7 +160,7 @@ $env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev
 
 ## 測試 5：Agent 修改（第六階段）
 
-輸入：「把場景改成夜間，使用冷色月光，降低環境亮度。」
+先依測試 3 開著預覽器，再在 Hermes 輸入：「把場景改成夜間，使用冷色月光，降低環境亮度。」
 
 - [ ] Hermes 呼叫 `papercraft_update_scene`，patch 通過驗證
 - [ ] `scene.json` 的 `generator.revision` +1，`history/` 有前一版
