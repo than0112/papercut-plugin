@@ -57,7 +57,9 @@ export default defineConfig({
     },
   },
   server: {
-    host: true,
+    // localhost only: with PAPERCRAFT_PROJECT the dev server serves your project files.
+    // Use `npm run dev -- --host` to test on a phone on your network, knowingly.
+    host: "127.0.0.1",
     fs: { allow: [".", "../schemas"] },
   },
   build: {

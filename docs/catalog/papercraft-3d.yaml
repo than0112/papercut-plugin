@@ -1,0 +1,24 @@
+# Draft entry for NousResearch/hermes-agent: plugin-catalog/papercraft-3d.yaml
+# Before opening the PR: replace `sha` with the full 40-character commit you want reviewed
+# (git rev-parse HEAD on the release commit) and keep `version` equal to plugin.yaml.
+name: papercraft-3d
+repo: https://github.com/than0112/papercut-plugin
+sha: 0000000000000000000000000000000000000000
+description: Turn an AI paper-cut image into a layered, interactive Three.js 2.5D scene with a matching design spec and natural-language edits.
+maintainer: than0112
+tier: community
+category: tools
+requires_hermes: ">=0.22"
+docs_url: https://github.com/than0112/papercut-plugin#readme
+version: "0.7.0"
+capabilities:
+  provides_tools:
+    - papercraft_analyze
+    - papercraft_build_scene
+    - papercraft_export_project
+    - papercraft_generate_plan
+    - papercraft_segment
+    - papercraft_update_scene
+  provides_hooks: []
+  provides_middleware: []
+  requires_env: []

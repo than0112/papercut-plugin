@@ -50,7 +50,7 @@ def test_spec_matches_scene(tmp_path, fixture_dir, monkeypatch):
     assert "`assets/sky_emissive.png`" in md
     viewer_pkg = json.loads((ROOT / "viewer" / "package.json").read_text())
     assert f"| three | {viewer_pkg['dependencies']['three']} |" in md
-    assert "**尚未實作**" in md, "unimplemented phases are stated honestly"
+    assert "npm ci && npm run build" in md and "尚未實作" not in md
     assert json.loads((pdir / "status.json").read_text())["stages"]["generate_plan"]["state"] == "succeeded"
 
 

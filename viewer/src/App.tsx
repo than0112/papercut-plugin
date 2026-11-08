@@ -25,7 +25,7 @@ export default function App() {
     ? `${state.loaded.scene.generator?.revision ?? 0}|${state.loaded.scene.generator?.updatedAt ?? ""}`
     : null;
   useEffect(() => {
-    if (loadedVersion === null) return;
+    if (loadedVersion === null || !import.meta.env.DEV) return; // a deployed build never changes
     const url = sceneUrl();
     const timer = window.setInterval(async () => {
       try {

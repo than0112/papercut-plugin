@@ -91,3 +91,13 @@ def test_analyze_rejects_non_image(registered, tmp_path):
 def test_results_are_json_serialisable_strings(registered):
     raw = registered.tools["papercraft_segment"]["handler"]({})
     assert json.loads(raw)["tool"] == "papercraft_segment"
+
+
+def test_catalog_draft_matches_manifest():
+    """The draft catalog entry must declare exactly what the plugin registers (catalog rule 6)."""
+    yaml = pytest.importorskip("yaml")
+    entry = yaml.safe_load((ROOT / "docs" / "catalog" / "papercraft-3d.yaml").read_text(encoding="utf-8"))
+    manifest = _manifest()
+    assert sorted(entry["capabilities"]["provides_tools"]) == sorted(manifest["provides_tools"])
+    assert entry["version"] == manifest["version"] and entry["requires_hermes"] == manifest["requires_hermes"]
+    assert entry["name"] == manifest["name"] and entry["repo"].startswith("https://")

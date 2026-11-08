@@ -8,10 +8,9 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.6.0 (phase 6 of 7).** Analysis, segmentation, scene building,
-> the design spec and natural-language scene editing work end to end. Export
-> still returns an explicit `not_implemented` error and never fakes a success.
-> See [Roadmap](#roadmap).
+> **Status: v0.7.0: all six tools work end to end.** Submission material:
+> [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/TEST_REPORT.md](docs/TEST_REPORT.md),
+> [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
 
 ## How it works
 
@@ -44,7 +43,7 @@ file through Ajv). The design spec is rendered from it.
 | `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
 | `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–F) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
 | `papercraft_update_scene` | Validated, atomic Scene Patch from a request in plain language. Protected paths, layers addressable by id, `$preset`, safety-bound rebalancing, history with `revert_to`, `dry_run`, spec and change log updated, live viewer reload | ✅ phase 6 |
-| `papercraft_export_project` | Standalone, relative-path Vite + Three.js project | phase 7 |
+| `papercraft_export_project` | Standalone Vite + React + Three.js project (`npm ci && npm run build`), scene and every asset, spec, logs with absolute paths removed. The plugin never runs npm | ✅ phase 7 |
 
 Every tool returns a JSON envelope: `{"ok": true, "data": …, "warnings": […]}` or
 `{"ok": false, "error": {"code", "message", "retryable", "details"}}`. Error
@@ -301,7 +300,7 @@ the same planes.
 4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
 5. ✅ Design spec generator (zh-TW / en, verified against scene.json)
 6. ✅ Natural-language Scene Patch (`papercraft_update_scene`), with a live-reloading viewer
-7. ⬜ Export, test report, demo, catalog PR
+7. ✅ Export, test report, demo script, catalog entry draft. Still to do: real-Hermes run of every stage, demo video, catalog PR
 
 ## 中文摘要
 
