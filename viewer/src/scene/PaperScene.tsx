@@ -1,9 +1,10 @@
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import type { LightingSpec, Scene } from "../types/scene";
+import type { Scene } from "../types/scene";
+import { activeLighting } from "./lighting";
 import { PaperLayer } from "./PaperLayer";
 import { useViewer } from "../store/viewerStore";
 
@@ -14,9 +15,6 @@ const TONE: Record<string, THREE.ToneMapping> = {
   neutral: THREE.NeutralToneMapping,
 };
 
-export function activeLighting(scene: Scene, preset: string | null): LightingSpec {
-  return (preset && scene.lightingPresets?.[preset]) || scene.lighting;
-}
 
 function Lights({ scene }: { scene: Scene }) {
   const preset = useViewer((s) => s.preset);
@@ -101,8 +99,43 @@ function CameraRig({ scene }: { scene: Scene }) {
       maxAzimuthAngle={azimuth}
       minZoom={fitZoom * (c.minZoom ?? 0.5)}
       maxZoom={fitZoom * (c.maxZoom ?? 3)}
+      minDistance={c.type === "perspective" ? c.position[2] / (c.maxZoom ?? 3) : undefined}
+      maxDistance={c.type === "perspective" ? c.position[2] / (c.minZoom ?? 0.5) : undefined}
     />
   );
+}
+
+/**
+ * Clip rendering to the back layer's rectangle as seen by the current camera (screen-space
+ * scissor). The camera orbits around the back layer, so this rectangle barely moves, and the
+ * back layer is completed everywhere by papercraft_segment: nothing inside can be empty, and
+ * nearer layers shifted past the image edge are cut off like by a shadow-box frame.
+ */
+function FrameClip({ scene }: { scene: Scene }) {
+  const corners = useMemo(() => {
+    const w = scene.frame.width / 2;
+    const h = scene.frame.height / 2;
+    const z = Math.min(...scene.layers.map((l) => l.depth));
+    return [new THREE.Vector3(-w, -h, z), new THREE.Vector3(w, -h, z), new THREE.Vector3(-w, h, z), new THREE.Vector3(w, h, z)];
+  }, [scene]);
+  const p = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ gl, scene: root, camera, size }) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const c of corners) {
+      p.copy(c).project(camera);
+      const x = ((p.x + 1) / 2) * size.width;
+      const y = ((p.y + 1) / 2) * size.height;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    gl.setScissorTest(false);
+    if (root.background instanceof THREE.Color) gl.setClearColor(root.background);
+    gl.clear();
+    gl.setScissor(Math.floor(x0), Math.floor(y0), Math.ceil(x1 - x0), Math.ceil(y1 - y0));
+    gl.setScissorTest(true);
+    gl.render(root, camera);
+    gl.setScissorTest(false);
+  }, 1);
+  return null;
 }
 
 export function PaperScene({ scene, baseUrl }: { scene: Scene; baseUrl: string }) {
@@ -124,11 +157,12 @@ export function PaperScene({ scene, baseUrl }: { scene: Scene; baseUrl: string }
         gl.toneMappingExposure = r.exposure ?? 1;
         gl.outputColorSpace = THREE.SRGBColorSpace;
       }}
-      camera={scene.camera.type === "perspective" ? { fov: scene.camera.fov ?? 35 } : undefined}
+      camera={scene.camera.type === "perspective" ? { fov: scene.camera.fov ?? 35, position: scene.camera.position } : undefined}
       style={{ touchAction: "none" }}
     >
       <color attach="background" args={[background]} />
       <Lights scene={scene} />
+      {r.clipToFrame !== false && <FrameClip scene={scene} />}
       <CameraRig scene={scene} />
       <Suspense fallback={null}>
         {layers

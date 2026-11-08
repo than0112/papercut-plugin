@@ -1,6 +1,6 @@
 import type { Scene } from "../types/scene";
 import { useViewer } from "../store/viewerStore";
-import { activeLighting } from "../scene/PaperScene";
+import { activeLighting } from "../scene/lighting";
 
 export function ControlPanel({ scene }: { scene: Scene }) {
   const v = useViewer();

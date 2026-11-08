@@ -116,7 +116,7 @@ def scene_for(layers: list[dict], width: int, height: int, source_sha: str) -> d
             "asset": f"assets/{layer['id']}.png",
             "mask": f"masks/{layer['id']}.png",
             "depth": round(order * spacing, 3),
-            "scale": round(1 + (len(layers) - 1 - order) * 0.02, 3),
+            "scale": 1,
             "geometry": {"type": "plane", "thickness": 0.02},
             "material": {"roughness": 0.95, "metalness": 0, "alphaTest": 0.5, "side": "double",
                          "paperTexture": {"enabled": True, "strength": 0.06, "scale": 8}},
@@ -126,20 +126,24 @@ def scene_for(layers: list[dict], width: int, height: int, source_sha: str) -> d
             "visible": True,
             "provenance": {"source": "manual", "method": "synthetic-fixture", "confidence": 1, "inpainted": False},
         })
+    # Same calibrated values core/scene_builder.py produces for this light
+    # (azimuth -30, elevation 45, 4200 K, softness 0.6): ambient + key·cos ≈ 3.0 ≈ π.
     day = {
         "preset": "day",
-        "ambient": {"type": "hemisphere", "color": "#fff4e0", "groundColor": "#6b4a3a", "intensity": 0.9},
-        "key": {"color": "#ffdfb0", "colorTemperatureK": 4200, "intensity": 2.2, "position": [-4, 5, 7],
-                "castShadow": True, "shadow": {"mapSize": 2048, "bias": -0.0005, "normalBias": 0.02, "radius": 4}},
+        "ambient": {"type": "ambient", "color": "#ffffff", "intensity": 1.65},
+        "key": {"color": "#ffd3af", "colorTemperatureK": 4200, "intensity": 2.205, "position": [-3.536, 7.071, 6.124],
+                "castShadow": True, "shadow": {"mapSize": 2048, "bias": -0.0005, "normalBias": 0.02, "radius": 5.6}},
         "background": "#1b1b1f",
+        "emissiveScale": 0.6,
     }
     night = {
         "preset": "night",
-        "ambient": {"type": "hemisphere", "color": "#8fa8ff", "groundColor": "#1a1530", "intensity": 0.35},
-        "key": {"color": "#b8c8ff", "colorTemperatureK": 8500, "intensity": 1.2, "position": [4, 6, 6],
+        "ambient": {"type": "hemisphere", "color": "#8da2e0", "groundColor": "#1c1830", "intensity": 0.75},
+        "key": {"color": "#d2dfff", "colorTemperatureK": 9000, "intensity": 1.468, "position": [4.056, 7.071, 5.792],
                 "castShadow": True, "shadow": {"mapSize": 2048, "bias": -0.0005, "normalBias": 0.02, "radius": 6}},
-        "rim": {"color": "#6f8cff", "intensity": 1.5, "position": [0, 2, -3]},
+        "rim": {"color": "#6f8cff", "intensity": 1.2, "position": [0, 3, -4]},
         "background": "#0b0d18",
+        "emissiveScale": 1.8,
     }
     return {
         "schemaVersion": "1.0",
@@ -157,7 +161,7 @@ def scene_for(layers: list[dict], width: int, height: int, source_sha: str) -> d
         "lighting": day,
         "lightingPresets": {"day": day, "night": night},
         "rendering": {"toneMapping": "neutral", "exposure": 1, "outputColorSpace": "srgb", "antialias": True,
-                      "shadows": True, "maxPixelRatio": 2,
+                      "shadows": True, "maxPixelRatio": 2, "clipToFrame": True,
                       "contactShadows": {"enabled": False, "opacity": 0.4, "blur": 2.5}},
         "interaction": {"orbit": True, "zoom": True,
                         "parallax": {"enabled": True, "strength": 0.15},

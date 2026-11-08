@@ -8,10 +8,10 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.3.2 (phase 3 of 7).** `papercraft_analyze` and
-> `papercraft_segment` work end to end. The later stages (scene building
-> onward) still return an explicit `not_implemented` error and never fake a
-> success. See [Roadmap](#roadmap).
+> **Status: v0.4.0 (phase 4 of 7).** `papercraft_analyze`,
+> `papercraft_segment` and `papercraft_build_scene` work end to end. The
+> design spec, scene editing and export stages still return an explicit
+> `not_implemented` error and never fake a success. See [Roadmap](#roadmap).
 
 ## How it works
 
@@ -41,7 +41,7 @@ file through Ajv). The design spec is rendered from it.
 |---|---|---|
 | `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
 | `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
-| `papercraft_build_scene` | Compose layers into a schema-valid `scene.json` | phase 4 |
+| `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
 | `papercraft_generate_plan` | `DESIGN_SPEC.md` rendered from `scene.json` | phase 5 |
 | `papercraft_update_scene` | Apply a validated JSON-Patch-style Scene Patch (the agent translates the user's words into it). Keeps history and updates the spec | phase 6 |
 | `papercraft_export_project` | Standalone, relative-path Vite + Three.js project | phase 7 |
@@ -166,6 +166,44 @@ The tests cover the following:
 5. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
    attempt is logged in `logs/process.jsonl`.
 
+## Preview a project
+
+`papercraft_build_scene` returns the exact command. In the plugin's `viewer`
+folder, after a one-time `npm install`:
+
+```powershell
+$env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev
+```
+
+```bash
+PAPERCRAFT_PROJECT="<project_dir>" npm run dev
+```
+
+Then open `http://localhost:5173/?scene=project/scene.json`. The dev server
+serves that one folder, read-only, at `/project/`, and serves only image, JSON
+and Markdown files inside it.
+
+## How the scene is built
+
+- **Depth.** The analysed `depthEstimate` values are scaled by
+  `depth_spacing`, and the image is 8 world units tall.
+- **Safety bounds.** Segmentation completed every layer `fill.marginPx` behind
+  nearer layers. The camera tilt limit is the largest angle at which two
+  overlapping layers shift by at most 60% of that margin. Parallax gets the
+  other 40%. Both are rounded down, and `scene.limits` records the resulting
+  shifts. A test recomputes them from `scene.json`.
+- **Edges.** The viewer clips drawing to the back layer's rectangle, like the
+  frame of a shadow box. It also extends every layer past the image edge by
+  mirroring, so a moving layer never ends abruptly at the border.
+- **Light.** The art already has painted light. Ambient plus key light is set
+  to a total irradiance of about 3.0 (π gives the unlit texture colour), with
+  55% ambient and 45% directional for real shadows between layers. The key's
+  direction and colour come from the analysed azimuth, elevation and colour
+  temperature. Night is cool moonlight with a backlight.
+- **Glow.** For each analysed emitter, only pixels inside its box that are both
+  bright and close to its colour glow. The box itself never glows.
+  `emissiveScale` makes lights brighter at night.
+
 ## How segmentation works
 
 1. **Regions on your machine.** Felzenszwalb graph segmentation runs on a
@@ -234,7 +272,7 @@ the same planes.
 1. ✅ Plugin skeleton: manifest, registration, schemas, security, tests, viewer scaffold
 2. ✅ Image analysis (`ctx.llm` vision → `analysis.json`)
 3. ✅ Layer conversion (masks, transparent layers, hidden-area fill, manual corrections)
-4. ⬜ Three.js scene builder (`scene.json`) + `shape`/`extrude` geometry
+4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
 5. ⬜ Design spec generator
 6. ⬜ Natural-language Scene Patch (`papercraft_update_scene`)
 7. ⬜ Export, test report, demo, catalog PR

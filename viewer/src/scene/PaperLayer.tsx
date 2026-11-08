@@ -6,6 +6,7 @@ import type { LayerSpec, Scene } from "../types/scene";
 import { assetUrl } from "./loadScene";
 import { paperGrainTexture } from "./paperTexture";
 import { useViewer } from "../store/viewerStore";
+import { activeLighting } from "./lighting";
 
 interface Props {
   layer: LayerSpec;
@@ -20,16 +21,40 @@ interface Props {
  */
 export function PaperLayer({ layer, scene, baseUrl }: Props) {
   const group = useRef<THREE.Group>(null);
-  const texture = useTexture(assetUrl(baseUrl, layer.asset));
+  const m = layer.material ?? {};
+  // One hook call; the keys only change if the scene file changes.
+  const textures = useTexture(
+    m.emissiveMap
+      ? { map: assetUrl(baseUrl, layer.asset), emissiveMap: assetUrl(baseUrl, m.emissiveMap) }
+      : { map: assetUrl(baseUrl, layer.asset) },
+  ) as { map: THREE.Texture; emissiveMap?: THREE.Texture };
+  const texture = textures.map;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
+  if (textures.emissiveMap) textures.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+
+  // Edge extension: the plane is larger than the image by `pad` on every side and the texture
+  // mirrors its edge content there, so a layer shifted by tilt/parallax never ends at the
+  // image border (which would expose the layer behind). At rest the image maps 1:1.
+  const W = scene.frame.width;
+  const H = scene.frame.height;
+  const pad = scene.limits
+    ? ((scene.limits.tiltShiftPx + scene.limits.parallaxShiftPx) / scene.units.pixelsPerUnit) * 1.25
+    : 0.05 * H;
+  for (const t of [texture, textures.emissiveMap]) {
+    if (!t) continue;
+    t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping; // reflect, rather than streak, the edge content
+    t.repeat.set((W + 2 * pad) / W, (H + 2 * pad) / H);
+    t.offset.set(-pad / W, -pad / H);
+  }
 
   const explode = useViewer((s) => s.explode);
   const parallaxOn = useViewer((s) => s.parallax);
   const selected = useViewer((s) => s.selected === layer.id);
   const pointer = useThree((s) => s.pointer);
+  const preset = useViewer((s) => s.preset);
+  const glowScale = activeLighting(scene, preset).emissiveScale ?? 1;
 
-  const m = layer.material ?? {};
   const paper = m.paperTexture ?? {};
   const grain = useMemo(() => {
     if (paper.enabled === false) return null;
@@ -65,7 +90,7 @@ export function PaperLayer({ layer, scene, baseUrl }: Props) {
   return (
     <group ref={group} position={[ox, oy, layer.depth]}>
       <mesh castShadow={layer.castShadow ?? true} receiveShadow={layer.receiveShadow ?? true} scale={scale}>
-        <planeGeometry args={[scene.frame.width, scene.frame.height]} />
+        <planeGeometry args={[W + 2 * pad, H + 2 * pad]} />
         <meshStandardMaterial
           map={texture}
           color={m.tint ?? "#ffffff"}
@@ -76,7 +101,8 @@ export function PaperLayer({ layer, scene, baseUrl }: Props) {
           transparent={(m.opacity ?? 1) < 1}
           side={m.side === "front" ? THREE.FrontSide : THREE.DoubleSide}
           emissive={selected ? "#3a6cff" : (m.emissive ?? "#000000")}
-          emissiveIntensity={selected ? 0.25 : (m.emissiveIntensity ?? 0)}
+          emissiveMap={selected ? null : (textures.emissiveMap ?? null)}
+          emissiveIntensity={selected ? 0.25 : (m.emissiveIntensity ?? 0) * glowScale}
           bumpMap={grain}
           bumpScale={grain ? (paper.strength ?? 0.08) : 0}
         />

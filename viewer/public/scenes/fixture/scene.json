@@ -50,7 +50,7 @@
       "asset": "assets/sky.png",
       "mask": "masks/sky.png",
       "depth": 0.0,
-      "scale": 1.08,
+      "scale": 1,
       "geometry": {
         "type": "plane",
         "thickness": 0.02
@@ -85,7 +85,7 @@
       "asset": "assets/mountains.png",
       "mask": "masks/mountains.png",
       "depth": 0.6,
-      "scale": 1.06,
+      "scale": 1,
       "geometry": {
         "type": "plane",
         "thickness": 0.02
@@ -120,7 +120,7 @@
       "asset": "assets/hills_far.png",
       "mask": "masks/hills_far.png",
       "depth": 1.2,
-      "scale": 1.04,
+      "scale": 1,
       "geometry": {
         "type": "plane",
         "thickness": 0.02
@@ -155,7 +155,7 @@
       "asset": "assets/hills_near.png",
       "mask": "masks/hills_near.png",
       "depth": 1.8,
-      "scale": 1.02,
+      "scale": 1,
       "geometry": {
         "type": "plane",
         "thickness": 0.02
@@ -190,7 +190,7 @@
       "asset": "assets/foreground.png",
       "mask": "masks/foreground.png",
       "depth": 2.4,
-      "scale": 1.0,
+      "scale": 1,
       "geometry": {
         "type": "plane",
         "thickness": 0.02
@@ -221,74 +221,74 @@
   "lighting": {
     "preset": "day",
     "ambient": {
-      "type": "hemisphere",
-      "color": "#fff4e0",
-      "groundColor": "#6b4a3a",
-      "intensity": 0.9
+      "type": "ambient",
+      "color": "#ffffff",
+      "intensity": 1.65
     },
     "key": {
-      "color": "#ffdfb0",
+      "color": "#ffd3af",
       "colorTemperatureK": 4200,
-      "intensity": 2.2,
+      "intensity": 2.205,
       "position": [
-        -4,
-        5,
-        7
+        -3.536,
+        7.071,
+        6.124
       ],
       "castShadow": true,
       "shadow": {
         "mapSize": 2048,
         "bias": -0.0005,
         "normalBias": 0.02,
-        "radius": 4
+        "radius": 5.6
       }
     },
-    "background": "#1b1b1f"
+    "background": "#1b1b1f",
+    "emissiveScale": 0.6
   },
   "lightingPresets": {
     "day": {
       "preset": "day",
       "ambient": {
-        "type": "hemisphere",
-        "color": "#fff4e0",
-        "groundColor": "#6b4a3a",
-        "intensity": 0.9
+        "type": "ambient",
+        "color": "#ffffff",
+        "intensity": 1.65
       },
       "key": {
-        "color": "#ffdfb0",
+        "color": "#ffd3af",
         "colorTemperatureK": 4200,
-        "intensity": 2.2,
+        "intensity": 2.205,
         "position": [
-          -4,
-          5,
-          7
+          -3.536,
+          7.071,
+          6.124
         ],
         "castShadow": true,
         "shadow": {
           "mapSize": 2048,
           "bias": -0.0005,
           "normalBias": 0.02,
-          "radius": 4
+          "radius": 5.6
         }
       },
-      "background": "#1b1b1f"
+      "background": "#1b1b1f",
+      "emissiveScale": 0.6
     },
     "night": {
       "preset": "night",
       "ambient": {
         "type": "hemisphere",
-        "color": "#8fa8ff",
-        "groundColor": "#1a1530",
-        "intensity": 0.35
+        "color": "#8da2e0",
+        "groundColor": "#1c1830",
+        "intensity": 0.75
       },
       "key": {
-        "color": "#b8c8ff",
-        "colorTemperatureK": 8500,
-        "intensity": 1.2,
+        "color": "#d2dfff",
+        "colorTemperatureK": 9000,
+        "intensity": 1.468,
         "position": [
-          4,
-          6,
-          6
+          4.056,
+          7.071,
+          5.792
         ],
         "castShadow": true,
         "shadow": {
@@ -300,14 +300,15 @@
       },
       "rim": {
         "color": "#6f8cff",
-        "intensity": 1.5,
+        "intensity": 1.2,
         "position": [
           0,
-          2,
-          -3
+          3,
+          -4
         ]
       },
-      "background": "#0b0d18"
+      "background": "#0b0d18",
+      "emissiveScale": 1.8
     }
   },
   "rendering": {
@@ -317,6 +318,7 @@
     "antialias": true,
     "shadows": true,
     "maxPixelRatio": 2,
+    "clipToFrame": true,
     "contactShadows": {
       "enabled": false,
       "opacity": 0.4,

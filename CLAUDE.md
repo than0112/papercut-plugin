@@ -27,4 +27,6 @@ Do not invent other APIs; check `website/docs/developer-guide/plugins/index.md` 
 - Segmentation runs Felzenszwalb, then a RAG merge, then Set-of-Mark labelling via ctx.llm, then refinement, then push-pull fill (`core/segmentation.py`, `core/segment_backends.py`).
   The tests use an oracle labeller that reads the fixture's ground truth, so they measure the pipeline and not the model.
 - The fixture's shadow and highlight sizes scale with the image width. Keep them that way, or accuracy tests at small sizes become unrealistic.
+- Scene limits are rounded DOWN, and the recorded shifts rounded UP. `tests/test_build_scene.py` recomputes the shifts from scene.json against the fill margin.
+- Preview a project with `PAPERCRAFT_PROJECT=<dir> npm run dev` in `viewer/`, then open `/?scene=project/scene.json`.
 - Regenerate the fixture with `python3 examples/make_synthetic_fixture.py viewer/public/scenes/fixture`. The output is deterministic.

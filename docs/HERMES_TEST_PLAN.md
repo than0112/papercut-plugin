@@ -123,9 +123,25 @@ Get-Content "<project_dir>\logs\process.jsonl"
 
 ## 測試 3：3D 預覽（第三、四階段）
 
-```bash
-cd "$P\viewer"; npm install; npm run dev
+對已分層的專案：
+
+> 用 papercraft_build_scene 為專案 <project_id> 建立場景，告訴我相機傾角上限、視差強度、發光物件結果與預覽方式。
+
+然後依工具回傳的 `preview` 指令（PowerShell）：
+
+```powershell
+cd "$P\viewer"; npm install
 ```
+
+```powershell
+$env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev
+```
+
+瀏覽器開啟 `http://localhost:5173/?scene=project/scene.json`。
+
+- [ ] 白天畫面與原圖色彩接近（不偏暗、不偏紅）
+- [ ] 拖曳傾斜到極限＋滑鼠移到角落：圖層之間沒有破洞，畫面邊緣沒有黑色缺口
+- [ ] Night：冷色月光，窗戶與燈籠發光，但只有亮部發光（不是整個方框）
 
 - [ ] 所有圖層資產載入、無嚴重透明排序錯誤
 - [ ] 旋轉（有限角度）、縮放、圖層展開正常

@@ -39,6 +39,7 @@ export interface MaterialSpec {
   tint?: HexColor;
   emissive?: HexColor;
   emissiveIntensity?: number;
+  emissiveMap?: string;
   paperTexture?: { enabled?: boolean; strength?: number; scale?: number };
 }
 
@@ -83,6 +84,7 @@ export interface LightingSpec {
   };
   rim?: { color: HexColor; intensity: number; position: Vec3 };
   background?: HexColor;
+  emissiveScale?: number;
 }
 
 export interface RenderingSpec {
@@ -92,6 +94,7 @@ export interface RenderingSpec {
   antialias?: boolean;
   shadows?: boolean;
   maxPixelRatio?: number;
+  clipToFrame?: boolean;
   contactShadows?: { enabled?: boolean; opacity?: number; blur?: number };
 }
 
@@ -117,4 +120,13 @@ export interface Scene {
   lightingPresets?: Record<string, LightingSpec>;
   rendering: RenderingSpec;
   interaction: InteractionSpec;
+  limits?: {
+    fillMarginPx: number;
+    tiltShiftPx: number;
+    parallaxShiftPx: number;
+    tiltBudget?: number;
+    parallaxBudget?: number;
+    maxTiltDegAnalysis?: number;
+  };
+  warnings?: string[];
 }

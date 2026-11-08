@@ -72,6 +72,7 @@ def scene_semantic_errors(scene: dict[str, Any], base_dir: Path | None = None) -
     if base_dir is not None:
         rels = [scene["source"]["image"]] + [layer["asset"] for layer in layers]
         rels += [layer["mask"] for layer in layers if "mask" in layer]
+        rels += [layer["material"]["emissiveMap"] for layer in layers if layer.get("material", {}).get("emissiveMap")]
         for rel in rels:
             if not (Path(base_dir) / rel).is_file():
                 problems.append(f"asset missing: {rel}")

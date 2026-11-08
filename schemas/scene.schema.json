@@ -4,218 +4,643 @@
   "title": "PaperCraft 3D Scene",
   "description": "Single source of truth shared by the Hermes plugin, the Three.js viewer and DESIGN_SPEC.md. Coordinates are right-handed world units (Three.js convention: +X right, +Y up, +Z toward the default camera). The image frame is centred on the origin; 1 world unit = units.pixelsPerUnit source pixels. Asset paths are relative to the directory containing scene.json.",
   "type": "object",
-  "required": ["schemaVersion", "sceneId", "name", "mode", "source", "units", "frame", "camera", "layers", "lighting", "rendering", "interaction"],
+  "required": [
+    "schemaVersion",
+    "sceneId",
+    "name",
+    "mode",
+    "source",
+    "units",
+    "frame",
+    "camera",
+    "layers",
+    "lighting",
+    "rendering",
+    "interaction"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": "1.0" },
-    "sceneId": { "$ref": "#/$defs/id" },
-    "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "sceneId": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
     "mode": {
       "description": "'layered' = real per-layer masks. 'preview' = degraded flat preview (示意預覽); must never be presented as a 3D reconstruction.",
-      "enum": ["layered", "preview"]
+      "enum": [
+        "layered",
+        "preview"
+      ]
     },
     "generator": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string" },
-        "version": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" },
-        "revision": { "type": "integer", "minimum": 0, "description": "Incremented by every applied Scene Patch." }
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Incremented by every applied Scene Patch."
+        }
       }
     },
     "source": {
       "type": "object",
-      "required": ["image", "width", "height"],
+      "required": [
+        "image",
+        "width",
+        "height"
+      ],
       "additionalProperties": false,
       "properties": {
-        "image": { "$ref": "#/$defs/relPath" },
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 },
-        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        "image": {
+          "$ref": "#/$defs/relPath"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     },
     "units": {
       "type": "object",
-      "required": ["pixelsPerUnit"],
+      "required": [
+        "pixelsPerUnit"
+      ],
       "additionalProperties": false,
       "properties": {
-        "pixelsPerUnit": { "type": "number", "exclusiveMinimum": 0, "description": "Source-image pixels per world unit." }
+        "pixelsPerUnit": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Source-image pixels per world unit."
+        }
       }
     },
     "frame": {
       "description": "Size of the full image plane in world units (preserves the source aspect ratio).",
       "type": "object",
-      "required": ["width", "height"],
+      "required": [
+        "width",
+        "height"
+      ],
       "additionalProperties": false,
       "properties": {
-        "width": { "type": "number", "exclusiveMinimum": 0 },
-        "height": { "type": "number", "exclusiveMinimum": 0 }
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
       }
     },
-    "camera": { "$ref": "#/$defs/camera" },
+    "camera": {
+      "$ref": "#/$defs/camera"
+    },
     "layers": {
       "type": "array",
       "minItems": 1,
       "maxItems": 12,
-      "items": { "$ref": "#/$defs/layer" }
+      "items": {
+        "$ref": "#/$defs/layer"
+      }
     },
-    "lighting": { "$ref": "#/$defs/lighting" },
+    "lighting": {
+      "$ref": "#/$defs/lighting"
+    },
     "lightingPresets": {
       "description": "Named lighting setups the viewer can switch between (e.g. day / night). The active one is 'lighting'.",
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/id" },
-      "additionalProperties": { "$ref": "#/$defs/lighting" }
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/lighting"
+      }
     },
-    "rendering": { "$ref": "#/$defs/rendering" },
-    "interaction": { "$ref": "#/$defs/interaction" }
+    "rendering": {
+      "$ref": "#/$defs/rendering"
+    },
+    "interaction": {
+      "$ref": "#/$defs/interaction"
+    },
+    "limits": {
+      "description": "How the camera and parallax bounds were derived, so they stay explainable and reproducible.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fillMarginPx",
+        "tiltShiftPx",
+        "parallaxShiftPx"
+      ],
+      "properties": {
+        "fillMarginPx": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "From layers.json: how far each layer was completed behind nearer layers."
+        },
+        "tiltShiftPx": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Largest relative shift between overlapping layers at the maximum camera tilt, in source pixels."
+        },
+        "parallaxShiftPx": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Largest relative shift between overlapping layers at full mouse parallax, in source pixels."
+        },
+        "tiltBudget": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "parallaxBudget": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxTiltDegAnalysis": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 90
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
     "relPath": {
       "description": "Relative POSIX path; no parent-directory segments, no absolute paths, no URLs.",
       "type": "string",
       "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(^|/)\\.\\.(/|$))(?!.*://)[A-Za-z0-9_./-]+$"
     },
-    "vec2": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
-    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
-    "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
-    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
-    "intensity": { "type": "number", "minimum": 0, "maximum": 20 },
+    "vec2": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "unit": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "intensity": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20
+    },
     "camera": {
       "type": "object",
-      "required": ["type", "position", "target"],
+      "required": [
+        "type",
+        "position",
+        "target"
+      ],
       "additionalProperties": false,
       "properties": {
-        "type": { "enum": ["orthographic", "perspective"] },
-        "position": { "$ref": "#/$defs/vec3" },
-        "target": { "$ref": "#/$defs/vec3" },
-        "fov": { "type": "number", "minimum": 5, "maximum": 120, "description": "Perspective only (degrees)." },
-        "zoom": { "type": "number", "exclusiveMinimum": 0, "default": 1 },
-        "minZoom": { "type": "number", "exclusiveMinimum": 0, "default": 0.5 },
-        "maxZoom": { "type": "number", "exclusiveMinimum": 0, "default": 3 },
-        "near": { "type": "number", "exclusiveMinimum": 0, "default": 0.1 },
-        "far": { "type": "number", "exclusiveMinimum": 0, "default": 100 },
+        "type": {
+          "enum": [
+            "orthographic",
+            "perspective"
+          ]
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "target": {
+          "$ref": "#/$defs/vec3"
+        },
+        "fov": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Perspective only (degrees)."
+        },
+        "zoom": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "minZoom": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.5
+        },
+        "maxZoom": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 3
+        },
+        "near": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.1
+        },
+        "far": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 100
+        },
         "maxPolarAngle": {
-          "type": "number", "minimum": 0, "maximum": 1.5708,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.5708,
           "description": "Max tilt away from the front view, radians. Small values keep hidden (un-inpainted) regions out of sight."
         },
         "maxAzimuthAngle": {
-          "type": "number", "minimum": 0, "maximum": 1.5708,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.5708,
           "description": "Max left/right rotation from the front view, radians (symmetric)."
         }
       }
     },
     "geometry": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
         "type": {
           "description": "plane = alpha-masked PlaneGeometry; shape = ShapeGeometry from the mask outline; extrude = ExtrudeGeometry with paper thickness.",
-          "enum": ["plane", "shape", "extrude"]
+          "enum": [
+            "plane",
+            "shape",
+            "extrude"
+          ]
         },
-        "thickness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.02, "description": "World units; used by 'extrude'." },
-        "outline": { "$ref": "#/$defs/relPath", "description": "Optional outline JSON (shape/extrude), relative path." },
-        "curveSegments": { "type": "integer", "minimum": 1, "maximum": 64, "default": 8 },
-        "bevel": { "type": "number", "minimum": 0, "maximum": 0.2, "default": 0 }
+        "thickness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.02,
+          "description": "World units; used by 'extrude'."
+        },
+        "outline": {
+          "$ref": "#/$defs/relPath",
+          "description": "Optional outline JSON (shape/extrude), relative path."
+        },
+        "curveSegments": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 8
+        },
+        "bevel": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.2,
+          "default": 0
+        }
       }
     },
     "material": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "roughness": { "$ref": "#/$defs/unit", "default": 0.95 },
-        "metalness": { "$ref": "#/$defs/unit", "default": 0 },
-        "opacity": { "$ref": "#/$defs/unit", "default": 1 },
-        "alphaTest": { "$ref": "#/$defs/unit", "default": 0.5, "description": "Cut-out threshold; keeps paper edges crisp and avoids transparency sorting artefacts." },
-        "side": { "enum": ["front", "double"], "default": "double" },
-        "tint": { "$ref": "#/$defs/color", "default": "#ffffff" },
-        "emissive": { "$ref": "#/$defs/color", "default": "#000000" },
-        "emissiveIntensity": { "type": "number", "minimum": 0, "maximum": 10, "default": 0 },
+        "roughness": {
+          "$ref": "#/$defs/unit",
+          "default": 0.95
+        },
+        "metalness": {
+          "$ref": "#/$defs/unit",
+          "default": 0
+        },
+        "opacity": {
+          "$ref": "#/$defs/unit",
+          "default": 1
+        },
+        "alphaTest": {
+          "$ref": "#/$defs/unit",
+          "default": 0.5,
+          "description": "Cut-out threshold; keeps paper edges crisp and avoids transparency sorting artefacts."
+        },
+        "side": {
+          "enum": [
+            "front",
+            "double"
+          ],
+          "default": "double"
+        },
+        "tint": {
+          "$ref": "#/$defs/color",
+          "default": "#ffffff"
+        },
+        "emissive": {
+          "$ref": "#/$defs/color",
+          "default": "#000000"
+        },
+        "emissiveIntensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 0
+        },
         "paperTexture": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean", "default": true },
-            "strength": { "type": "number", "minimum": 0, "maximum": 0.5, "default": 0.08, "description": "Kept low so the procedural grain never overrides the source art." },
-            "scale": { "type": "number", "exclusiveMinimum": 0, "maximum": 64, "default": 8 }
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.5,
+              "default": 0.08,
+              "description": "Kept low so the procedural grain never overrides the source art."
+            },
+            "scale": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 64,
+              "default": 8
+            }
           }
+        },
+        "emissiveMap": {
+          "$ref": "#/$defs/relPath",
+          "description": "RGB PNG, black except the pixels that glow (lit windows, lanterns, a drawn sun). Multiplies emissive."
         }
       }
     },
     "provenance": {
       "type": "object",
-      "required": ["source"],
+      "required": [
+        "source"
+      ],
       "additionalProperties": false,
       "properties": {
-        "source": { "enum": ["auto", "manual", "preview"], "description": "auto = pipeline mask, manual = user-corrected mask, preview = degraded flat copy." },
-        "method": { "type": "string", "maxLength": 120 },
-        "confidence": { "$ref": "#/$defs/unit" },
-        "inpainted": { "type": "boolean", "default": false },
-        "editedAt": { "type": "string", "format": "date-time" }
+        "source": {
+          "enum": [
+            "auto",
+            "manual",
+            "preview"
+          ],
+          "description": "auto = pipeline mask, manual = user-corrected mask, preview = degraded flat copy."
+        },
+        "method": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "confidence": {
+          "$ref": "#/$defs/unit"
+        },
+        "inpainted": {
+          "type": "boolean",
+          "default": false
+        },
+        "editedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
       }
     },
     "layer": {
       "type": "object",
-      "required": ["id", "name", "role", "order", "asset", "depth", "geometry", "visible", "provenance"],
+      "required": [
+        "id",
+        "name",
+        "role",
+        "order",
+        "asset",
+        "depth",
+        "geometry",
+        "visible",
+        "provenance"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
-        "role": { "enum": ["sky", "background", "midground", "foreground", "detail"] },
-        "order": { "type": "integer", "minimum": 0, "description": "Paint order, 0 = farthest. Unique per scene." },
-        "asset": { "$ref": "#/$defs/relPath", "description": "Transparent PNG at the source image's full size." },
-        "mask": { "$ref": "#/$defs/relPath" },
-        "depth": { "type": "number", "minimum": -20, "maximum": 20, "description": "Z position in world units (larger = closer to camera)." },
-        "offset": { "$ref": "#/$defs/vec2", "description": "XY offset in world units (default [0,0])." },
-        "scale": { "type": "number", "exclusiveMinimum": 0, "maximum": 4, "default": 1, "description": "Uniform scale; >1 compensates perspective shrink of far layers." },
-        "geometry": { "$ref": "#/$defs/geometry" },
-        "material": { "$ref": "#/$defs/material" },
-        "parallaxFactor": { "type": "number", "minimum": 0, "maximum": 3, "default": 1, "description": "Multiplier on interaction.parallax.strength for this layer." },
-        "castShadow": { "type": "boolean", "default": true },
-        "receiveShadow": { "type": "boolean", "default": true },
-        "visible": { "type": "boolean" },
-        "provenance": { "$ref": "#/$defs/provenance" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "enum": [
+            "sky",
+            "background",
+            "midground",
+            "foreground",
+            "detail"
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Paint order, 0 = farthest. Unique per scene."
+        },
+        "asset": {
+          "$ref": "#/$defs/relPath",
+          "description": "Transparent PNG at the source image's full size."
+        },
+        "mask": {
+          "$ref": "#/$defs/relPath"
+        },
+        "depth": {
+          "type": "number",
+          "minimum": -20,
+          "maximum": 20,
+          "description": "Z position in world units (larger = closer to camera)."
+        },
+        "offset": {
+          "$ref": "#/$defs/vec2",
+          "description": "XY offset in world units (default [0,0])."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4,
+          "default": 1,
+          "description": "Uniform scale; >1 compensates perspective shrink of far layers."
+        },
+        "geometry": {
+          "$ref": "#/$defs/geometry"
+        },
+        "material": {
+          "$ref": "#/$defs/material"
+        },
+        "parallaxFactor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3,
+          "default": 1,
+          "description": "Multiplier on interaction.parallax.strength for this layer."
+        },
+        "castShadow": {
+          "type": "boolean",
+          "default": true
+        },
+        "receiveShadow": {
+          "type": "boolean",
+          "default": true
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
       }
     },
     "lighting": {
       "type": "object",
-      "required": ["ambient", "key"],
+      "required": [
+        "ambient",
+        "key"
+      ],
       "additionalProperties": false,
       "properties": {
-        "preset": { "type": "string", "maxLength": 64 },
+        "preset": {
+          "type": "string",
+          "maxLength": 64
+        },
         "ambient": {
           "type": "object",
-          "required": ["color", "intensity"],
+          "required": [
+            "color",
+            "intensity"
+          ],
           "additionalProperties": false,
           "properties": {
-            "type": { "enum": ["ambient", "hemisphere"], "default": "ambient" },
-            "color": { "$ref": "#/$defs/color" },
-            "groundColor": { "$ref": "#/$defs/color", "description": "Hemisphere only." },
-            "intensity": { "$ref": "#/$defs/intensity" }
+            "type": {
+              "enum": [
+                "ambient",
+                "hemisphere"
+              ],
+              "default": "ambient"
+            },
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "groundColor": {
+              "$ref": "#/$defs/color",
+              "description": "Hemisphere only."
+            },
+            "intensity": {
+              "$ref": "#/$defs/intensity"
+            }
           }
         },
         "key": {
           "type": "object",
-          "required": ["color", "intensity", "position"],
+          "required": [
+            "color",
+            "intensity",
+            "position"
+          ],
           "additionalProperties": false,
           "properties": {
-            "color": { "$ref": "#/$defs/color" },
-            "colorTemperatureK": { "type": "number", "minimum": 1000, "maximum": 20000, "description": "Informational; color is authoritative." },
-            "intensity": { "$ref": "#/$defs/intensity" },
-            "position": { "$ref": "#/$defs/vec3" },
-            "target": { "$ref": "#/$defs/vec3" },
-            "castShadow": { "type": "boolean", "default": true },
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "colorTemperatureK": {
+              "type": "number",
+              "minimum": 1000,
+              "maximum": 20000,
+              "description": "Informational; color is authoritative."
+            },
+            "intensity": {
+              "$ref": "#/$defs/intensity"
+            },
+            "position": {
+              "$ref": "#/$defs/vec3"
+            },
+            "target": {
+              "$ref": "#/$defs/vec3"
+            },
+            "castShadow": {
+              "type": "boolean",
+              "default": true
+            },
             "shadow": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "mapSize": { "enum": [512, 1024, 2048, 4096], "default": 2048 },
-                "bias": { "type": "number", "minimum": -0.01, "maximum": 0.01, "default": -0.0005 },
-                "normalBias": { "type": "number", "minimum": 0, "maximum": 0.2, "default": 0.02 },
-                "radius": { "type": "number", "minimum": 0, "maximum": 20, "default": 4 }
+                "mapSize": {
+                  "enum": [
+                    512,
+                    1024,
+                    2048,
+                    4096
+                  ],
+                  "default": 2048
+                },
+                "bias": {
+                  "type": "number",
+                  "minimum": -0.01,
+                  "maximum": 0.01,
+                  "default": -0.0005
+                },
+                "normalBias": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.2,
+                  "default": 0.02
+                },
+                "radius": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 20,
+                  "default": 4
+                }
               }
             }
           }
@@ -223,35 +648,100 @@
         "rim": {
           "description": "Optional back light between layers (backlight / 背光 effect).",
           "type": "object",
-          "required": ["color", "intensity", "position"],
+          "required": [
+            "color",
+            "intensity",
+            "position"
+          ],
           "additionalProperties": false,
           "properties": {
-            "color": { "$ref": "#/$defs/color" },
-            "intensity": { "$ref": "#/$defs/intensity" },
-            "position": { "$ref": "#/$defs/vec3" }
+            "color": {
+              "$ref": "#/$defs/color"
+            },
+            "intensity": {
+              "$ref": "#/$defs/intensity"
+            },
+            "position": {
+              "$ref": "#/$defs/vec3"
+            }
           }
         },
-        "background": { "$ref": "#/$defs/color" }
+        "background": {
+          "$ref": "#/$defs/color"
+        },
+        "emissiveScale": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 1,
+          "description": "Multiplier on every layer's emissive glow under this lighting (e.g. low by day, high at night)."
+        }
       }
     },
     "rendering": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "toneMapping": { "enum": ["none", "aces", "agx", "neutral"], "default": "neutral", "description": "neutral (Khronos PBR Neutral) keeps the source art's base colours; agx/aces desaturate." },
-        "exposure": { "type": "number", "minimum": 0.1, "maximum": 4, "default": 1 },
-        "outputColorSpace": { "enum": ["srgb"], "default": "srgb" },
-        "antialias": { "type": "boolean", "default": true },
-        "shadows": { "type": "boolean", "default": true },
-        "maxPixelRatio": { "type": "number", "minimum": 1, "maximum": 3, "default": 2 },
+        "toneMapping": {
+          "enum": [
+            "none",
+            "aces",
+            "agx",
+            "neutral"
+          ],
+          "default": "neutral",
+          "description": "neutral (Khronos PBR Neutral) keeps the source art's base colours; agx/aces desaturate."
+        },
+        "exposure": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 4,
+          "default": 1
+        },
+        "outputColorSpace": {
+          "enum": [
+            "srgb"
+          ],
+          "default": "srgb"
+        },
+        "antialias": {
+          "type": "boolean",
+          "default": true
+        },
+        "shadows": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxPixelRatio": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 2
+        },
         "contactShadows": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean", "default": false },
-            "opacity": { "$ref": "#/$defs/unit", "default": 0.4 },
-            "blur": { "type": "number", "minimum": 0, "maximum": 10, "default": 2.5 }
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "opacity": {
+              "$ref": "#/$defs/unit",
+              "default": 0.4
+            },
+            "blur": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 2.5
+            }
           }
+        },
+        "clipToFrame": {
+          "type": "boolean",
+          "default": true,
+          "description": "Clip drawing to the back layer's rectangle (like the frame of a paper shadow box), so layers that shift past the image edge are cut off instead of revealing empty space."
         }
       }
     },
@@ -259,22 +749,46 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "orbit": { "type": "boolean", "default": true },
-        "zoom": { "type": "boolean", "default": true },
+        "orbit": {
+          "type": "boolean",
+          "default": true
+        },
+        "zoom": {
+          "type": "boolean",
+          "default": true
+        },
         "parallax": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean", "default": true },
-            "strength": { "type": "number", "minimum": 0, "maximum": 2, "default": 0.15, "description": "World units of offset per unit depth at full pointer deflection." }
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "default": 0.15,
+              "description": "World units of offset per unit depth at full pointer deflection."
+            }
           }
         },
         "explodedView": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean", "default": true },
-            "spacing": { "type": "number", "minimum": 0, "maximum": 10, "default": 1.5, "description": "Extra Z spacing between layers at full explode." }
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "spacing": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 1.5,
+              "description": "Extra Z spacing between layers at full explode."
+            }
           }
         }
       }
