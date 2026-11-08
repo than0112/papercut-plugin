@@ -64,7 +64,6 @@ def handle(args: dict[str, Any], runtime: Runtime, **kwargs: Any) -> str:
 
 @tool_handler(NAME)
 def _handle(args: dict[str, Any], runtime: Runtime) -> str:
-    project = open_project_for("build_scene", args, runtime)
     preset = args.get("lighting_preset", "auto")
     camera_type = args.get("camera", "orthographic")
     spacing = args.get("depth_spacing", 0.6)
@@ -74,6 +73,7 @@ def _handle(args: dict[str, Any], runtime: Runtime) -> str:
         raise PaperCraftError(ErrorCode.INVALID_ARGUMENT, "camera must be orthographic or perspective.")
     if isinstance(spacing, bool) or not isinstance(spacing, (int, float)) or not 0.05 <= spacing <= 5:
         raise PaperCraftError(ErrorCode.INVALID_ARGUMENT, "depth_spacing must be a number from 0.05 to 5.")
+    project = open_project_for("build_scene", args, runtime)
 
     set_stage(project, "build_scene", "running")
     try:

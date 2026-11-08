@@ -8,10 +8,10 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.4.0 (phase 4 of 7).** `papercraft_analyze`,
-> `papercraft_segment` and `papercraft_build_scene` work end to end. The
-> design spec, scene editing and export stages still return an explicit
-> `not_implemented` error and never fake a success. See [Roadmap](#roadmap).
+> **Status: v0.5.0 (phase 5 of 7).** Analysis, segmentation, scene building
+> and the design spec work end to end. Scene editing and export still return
+> an explicit `not_implemented` error and never fake a success. See
+> [Roadmap](#roadmap).
 
 ## How it works
 
@@ -42,7 +42,7 @@ file through Ajv). The design spec is rendered from it.
 | `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
 | `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
 | `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
-| `papercraft_generate_plan` | `DESIGN_SPEC.md` rendered from `scene.json` | phase 5 |
+| `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–F) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
 | `papercraft_update_scene` | Apply a validated JSON-Patch-style Scene Patch (the agent translates the user's words into it). Keeps history and updates the spec | phase 6 |
 | `papercraft_export_project` | Standalone, relative-path Vite + Three.js project | phase 7 |
 
@@ -273,7 +273,7 @@ the same planes.
 2. ✅ Image analysis (`ctx.llm` vision → `analysis.json`)
 3. ✅ Layer conversion (masks, transparent layers, hidden-area fill, manual corrections)
 4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
-5. ⬜ Design spec generator
+5. ✅ Design spec generator (zh-TW / en, verified against scene.json)
 6. ⬜ Natural-language Scene Patch (`papercraft_update_scene`)
 7. ⬜ Export, test report, demo, catalog PR
 

@@ -150,6 +150,10 @@ $env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev
 
 ## 測試 4：企劃書生成（第五階段）
 
+> 用 papercraft_generate_plan 為專案 <project_id> 產生企劃書
+
+打開專案資料夾裡的 `DESIGN_SPEC.md`：
+
 - [ ] 含 A–F 全部章節
 - [ ] 光源、材質、深度數值與 `scene.json` 一致（可用 `jq` 比對）
 - [ ] 所有檔案路徑存在、步驟可重現
