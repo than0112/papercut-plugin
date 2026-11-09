@@ -1,482 +1,369 @@
-# PaperCraft 3D for Hermes
+<div align="center">
 
-> One image. One Hermes plugin. An interactive 3D web experience.
+# PaperCraft 3D
 
-A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that turns an
-AI-generated **paper-cut / papercraft image** into a layered, interactive
-**Three.js 2.5D scene**. It also writes a design spec (`DESIGN_SPEC.md`) that is
-generated from the scene's own `scene.json`, so the two cannot disagree. You can
-then change the scene in plain language ("make it night with cold moonlight").
+### From AI Art to Interactive 3D Scenes
 
-> **Status: v0.9.2.** All six tools work end to end, in Hermes and as a Claude Code plugin.
-> Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
-> [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
+**One Image. Multiple Layers. A Living 3D Scene.**
 
-## Quick start
+[![Hermes Agent plugin](https://img.shields.io/badge/Hermes_Agent-plugin-5A3FC0)](https://github.com/NousResearch/hermes-agent)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#option-b-claude-code)
+[![Three.js](https://img.shields.io/badge/Three.js-r187-000000?logo=three.js)](https://threejs.org)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2EA44F)](LICENSE)
 
-The same repository installs in two hosts. Pick one.
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Architecture](#architecture) ·
+[Status](#current-status--limitations) · [Roadmap](#roadmap-toward-a-blender-pipeline) ·
+[Documentation](#documentation)
 
-### Requirements
+</div>
 
-| What | Version | Needed for |
-|---|---|---|
-| Python | 3.11 or newer | Both hosts |
-| Node.js | 20.19 or newer (includes npm) | Only to preview a scene or build the exported site |
-| Hermes Agent | 0.22 or newer | Option A |
-| Claude Code | a current release | Option B |
+PaperCraft 3D is an open-source [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin
+that turns AI-generated papercut artwork into structured depth layers, an interactive Three.js scene
+and an editable development specification.
 
-Check them with `python --version` (`python3 --version` on macOS and Linux) and `node --version`.
+It does more than add a visual 3D effect to a picture. It tries to establish an AI-to-3D workflow you
+can **verify, edit and run again**. Every step writes plain files that you can inspect, and every model
+answer is checked before it is used. You end up with code and assets you own.
+
+> **What you get today is a 2.5D layered scene:** transparent cut-out planes at different depths, not
+> a 3D mesh with full topology and back faces. Turning those layers into real geometry through Blender
+> is the [long-term direction](#roadmap-toward-a-blender-pipeline).
+
+## Showcase
+
+<!-- Real end-to-end captures only. File names and how to capture them: docs/media/README.md -->
+
+| Original AI artwork | Semantic layer map | Interactive Three.js preview |
+|:---:|:---:|:---:|
+| *Capture pending:* `docs/media/01-original.webp` | *Capture pending:* `docs/media/02-layer-map.png` | *Capture pending:* `docs/media/03-preview.png` |
+
+More captures are planned: the **exploded layer view**, **day vs night lighting**, and **natural-language
+scene editing** (a chat request, then the viewer reloading to the new revision). The
+[shot list](docs/media/README.md) describes each one.
+
+This repository does not show the synthetic test fixture as a result. That fixture is drawn by a
+script to test the pipeline against known layers; it is not output of the AI workflow. The showcase
+will only contain real end-to-end runs, labelled with the host and plugin version that produced them.
+
+## Why PaperCraft 3D?
+
+AI-generated artwork may look dimensional, but it usually lacks editable geometry, meaningful depth
+separation and a reusable scene structure. A papercut illustration is a good starting point because
+it is already made of layers: sky, distant hills, a village, a framing tree, flowers in front. They are
+simply flattened into one image.
+
+PaperCraft 3D tries to recover that structure and keep it in a form a developer can work with:
+
+- **Semantic layers instead of a depth guess.** Each layer is a named part of the scene, such as
+  `sky` or `harbor_village`, with its own transparent PNG and mask, and the hidden area behind nearer
+  layers filled in.
+- **A scene contract instead of a one-off render.** `scene.json` follows a JSON Schema that the plugin,
+  the viewer and the spec generator all share.
+- **An agent workflow instead of a black box.** The model plans and labels; the plugin measures, checks
+  and refuses to fake success. When a step fails, it says so.
+
+## How It Works
+
+Hermes Agent drives the whole flow. It reads your request, calls the six PaperCraft tools in order, and
+lends the plugin its configured vision model through `ctx.llm`. The plugin does the image processing
+and validation on your machine.
+
+```mermaid
+flowchart TD
+    U(["You: a papercut image + a request"]) --> H{{"Hermes Agent<br/>plans the steps, calls the tools"}}
+    VM[("Your vision model<br/>(configured in Hermes)")]
+
+    H -->|"1 · papercraft_analyze"| A["Vision analysis<br/>layer plan · palette · light"]
+    A -.->|"ctx.llm"| VM
+    H -->|"2 · papercraft_segment"| S["Felzenszwalb regions<br/>+ Set-of-Mark labels"]
+    S -.->|"ctx.llm"| VM
+    S --> L["Layer PNGs + masks<br/>layers.json"]
+    H -->|"3 · papercraft_build_scene"| J["scene.json"]
+    L --> J
+    J --> V["Three.js viewer"]
+    H -->|"4 · papercraft_generate_plan"| D["DESIGN_SPEC.md"]
+    J --> D
+    H -->|"5 · papercraft_update_scene<br/>'make it night'"| J
+    H -->|"6 · papercraft_export_project"| E["Standalone Vite + Three.js project"]
+    J --> E
+```
+
+1. **Analyse.** The vision model plans 3–8 depth layers, their order and occlusion, the palette, the
+   light direction and the glowing elements. The plugin checks the reply against a schema and the
+   palette against the real pixels.
+2. **Segment.** The plugin divides the image into regions along the paper cut lines and numbers them.
+   The vision model says which layer each number belongs to (Set-of-Mark labelling), and unclear
+   regions get a second, finer round.
+3. **Build.** The layers become a `scene.json` with depths, camera and parallax limits that keep gaps
+   hidden, and day and night lighting.
+4. **Document, edit, export.** A design spec is generated from the scene. Plain-language edits become
+   validated scene patches. The result exports as a standalone web project.
+
+## Core Features
+
+The plugin provides six tools. The agent calls them for you; you can also name them in your request.
+
+| Tool | What it does |
+|---|---|
+| `papercraft_analyze` | Validates the image, creates a project and writes `analysis.json`: layers, occlusion, palette, light, camera and glowing elements. The model's reply is schema-checked and repaired once if needed, and its colours are checked against the pixels. |
+| `papercraft_segment` | Produces full-size transparent layer PNGs, masks and `layers.json`, with hidden areas filled in. Restacking the layers reproduces the source exactly. Wrong regions can be corrected with painted masks, without calling the model again. |
+| `papercraft_build_scene` | Writes a schema-valid `scene.json`. Tilt and parallax limits are derived from the filled margin so gaps never show, light is calibrated to the painted art, and glow maps cover only the bright pixels of lamps, windows and the sun. |
+| `papercraft_generate_plan` | Writes `DESIGN_SPEC.md` (Traditional Chinese or English). Every number is read from `scene.json` and re-checked against it, and your own notes survive regeneration. |
+| `papercraft_update_scene` | Applies a plain-language edit ("make it night with cold moonlight") as a validated, atomic patch, with protected paths, history and undo. The spec's change log updates and an open viewer reloads. |
+| `papercraft_export_project` | Exports a standalone Vite + React + Three.js project with relative paths only. You build it with `npm ci && npm run build`. |
+
+**Verification at a glance.** Each level is reported separately; see
+[Current Status](#current-status--limitations) for the details.
+
+| Tool | Implemented | Automated tests | Claude Code host, real images | Hermes, real vision model |
+|---|:---:|:---:|:---:|:---:|
+| `papercraft_analyze` | ✅ | ✅ | ✅ | ✅ |
+| `papercraft_segment` | ✅ | ✅ | ✅ | ⚠️ ran; quality review open |
+| `papercraft_build_scene` | ✅ | ✅ | ✅ | not yet run |
+| `papercraft_generate_plan` | ✅ | ✅ | ✅ | not yet run |
+| `papercraft_update_scene` | ✅ | ✅ | ✅ | not yet run |
+| `papercraft_export_project` | ✅ | ✅ | ✅ | not yet run |
+
+## Quick Start
+
+You need Python 3.11+. Node.js 20.19+ is only needed to preview scenes and build the exported site.
+Pick the host you use.
 
 ### Option A: Hermes Agent
 
-1. Install and enable the plugin. Hermes clones it into its plugins folder
-   (`%LOCALAPPDATA%\hermes\plugins` on Windows, `~/.hermes/plugins` on macOS and Linux):
-
-   ```bash
-   hermes plugins install than0112/papercut-plugin --enable
-   ```
-
-2. When Hermes asks to install the Python dependencies (Pillow, numpy, jsonschema, scipy,
-   scikit-image), accept.
-3. **Restart Hermes** (and Hermes Desktop) so the plugin loads.
-4. Check that it is listed:
-
-   ```bash
-   hermes plugins list
-   ```
-
-5. Make sure Hermes has a **vision-capable model** configured. The plugin sends the image
-   only to that model, through Hermes.
-6. Attach a paper-cut image in Hermes and say, for example:
-
-   > 用 papercraft_analyze 分析這張圖，然後 papercraft_segment 分層、papercraft_build_scene 建場景、papercraft_generate_plan 產生企劃書。
-
-To update later, run the following, then restart Hermes again:
+Requires Hermes Agent 0.22 or newer, with a **vision-capable model** configured.
 
 ```bash
-hermes plugins update papercraft-3d
+hermes plugins install than0112/papercut-plugin --enable
 ```
 
-Every tool result carries `pluginVersion`, so you can confirm which version is actually running.
-The full test procedure is in [docs/HERMES_TEST_PLAN.md](docs/HERMES_TEST_PLAN.md).
+Accept the prompt to install the Python dependencies (Pillow, numpy, jsonschema, scipy,
+scikit-image). Then restart the gateway so it loads the plugin, and reconnect Hermes Desktop:
+
+```bash
+hermes gateway restart
+```
+
+```bash
+hermes plugins doctor papercraft-3d
+```
+
+`doctor` should report 6 tools. Hermes keeps plugin tools behind Tool Search, so if the agent says it
+cannot see them, ask it to `tool_search` for "papercraft"
+([details](docs/INSTALLATION.md#finding-the-tools-in-a-conversation)).
 
 ### Option B: Claude Code
 
-In Claude Code, the vision model is Claude itself. No API key is needed.
-
-1. Add the marketplace (this repository) and install the plugin, in a terminal:
-
-   ```bash
-   claude plugin marketplace add than0112/papercut-plugin
-   ```
-
-   ```bash
-   claude plugin install papercraft-3d@papercraft
-   ```
-
-   Or inside Claude Code: `/plugin marketplace add than0112/papercut-plugin`, then
-   `/plugin install papercraft-3d@papercraft`.
-2. Start a new Claude Code session so the plugin loads.
-3. **Windows only:** if `python3` does not start Python on your machine, set the Python command
-   to `python` or `py`:
-
-   ```
-   /plugin configure papercraft-3d@papercraft
-   ```
-
-   The same command sets `workspace_dir`, the folder where projects are written. By default,
-   projects go to `papercraft-projects/` in the folder where you started Claude Code.
-4. Ask, for example: "用 PaperCraft 3D 把 ./my-papercut.png 做成 Three.js 紙雕場景".
-5. On first use, Claude reports that the imaging libraries are missing and shows two commands
-   that install them into the plugin's own data folder (a virtualenv, not your system Python).
-   Allow them. No restart is needed afterwards.
-
-To update later:
+In Claude Code, Claude itself is the vision model, so no API key is needed.
 
 ```bash
-claude plugin marketplace update papercraft
+claude plugin marketplace add than0112/papercut-plugin
 ```
 
 ```bash
-claude plugin update papercraft-3d@papercraft
+claude plugin install papercraft-3d@papercraft
 ```
 
-### Preview the scene and build the website
+Start a new session. On first use, Claude asks to install the imaging libraries into the plugin's own
+virtualenv. On Windows, if `python3` does not start Python, run
+`/plugin configure papercraft-3d@papercraft` and set the Python command to `python` or `py`.
 
-Both hosts finish the build step by returning the exact preview command for your project. In short:
+### First run
 
-1. Once, in the plugin's `viewer` folder: `npm install`.
-2. Start the viewer with `PAPERCRAFT_PROJECT` set to the project folder
-   (PowerShell: `$env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev`,
-   bash: `PAPERCRAFT_PROJECT="<project_dir>" npm run dev`).
-3. Open `http://localhost:5173/?scene=project/scene.json`. The viewer reloads by itself after
-   every edit.
-4. After `papercraft_export_project`, build the standalone site in the export folder:
+Attach or point to a papercut image and say:
 
-   ```bash
-   npm ci
-   ```
+> Turn this papercut image into an interactive Three.js scene with PaperCraft 3D: analyze it, split it
+> into layers, build the scene and write the design spec. Show me the layer map before building.
 
-   ```bash
-   npm run build
-   ```
+Each result names the next step. When the scene is built, the result also gives the exact command to
+preview it in the bundled viewer. Every result carries `pluginVersion`, so you always know which code
+answered.
 
-   Upload `dist/` to any static host.
+Detailed setup, settings, preview commands for Windows, macOS and Linux, and troubleshooting are in
+[docs/INSTALLATION.md](docs/INSTALLATION.md).
 
-### Troubleshooting
+## Example Workflow
 
-| Symptom | Fix |
-|---|---|
-| Hermes keeps running an old version (`pluginVersion` is old) | `hermes plugins remove papercraft-3d`, then install again and restart Hermes |
-| Hermes: `model_unavailable` | Configure a vision-capable model in Hermes |
-| Claude Code: the papercraft tools do not appear | Run `/mcp` to see the server's state. On Windows, set the Python command (step 3 of Option B) |
-| Claude Code: "needs its imaging libraries" | Let Claude run the two setup commands it shows, then call the tool again |
-| A part of the picture is in the wrong layer | Look at `review/overlay.png` and `review/layer_map.png`, paint a mask, and correct it with `manual_masks` (Hermes) or `papercraft_segment_correct` (Claude Code) |
+Every project is a folder of plain files. The table below shows what a run produces, and what a
+developer can do with each output.
 
-## How it works
-
-```
-image ──► papercraft_analyze ──► analysis.json   (vision model via Hermes ctx.llm)
-              │
-              ▼
-        papercraft_segment ────► layers/*.png + masks + layers.json
-              │
-              ▼
-        papercraft_build_scene ► scene.json  ──►  Three.js viewer
-              │                     ▲
-              ▼                     │ validated Scene Patch
-        papercraft_generate_plan    │
-              │               papercraft_update_scene  ◄── "make it night…"
-              ▼
-        DESIGN_SPEC.md ──► papercraft_export_project ──► standalone Vite project
-```
-
-`schemas/scene.schema.json` is the single source of truth. The Python plugin
-validates against it, and so does the viewer at load time (it uses the same
-file through Ajv). The design spec is rendered from it.
-
-## Tools
-
-| Tool | Purpose | Status |
+| Output | What it contains | What you can do with it |
 |---|---|---|
-| `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
-| `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
-| `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
-| `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–G) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
-| `papercraft_update_scene` | Validated, atomic Scene Patch from a request in plain language. Protected paths, layers addressable by id, `$preset`, safety-bound rebalancing, history with `revert_to`, `dry_run`, spec and change log updated, live viewer reload | ✅ phase 6 |
-| `papercraft_export_project` | Standalone Vite + React + Three.js project (`npm ci && npm run build`), scene and every asset, spec, logs with absolute paths removed. The plugin never runs npm | ✅ phase 7 |
+| `analysis.json` | The layer plan (ids, order, depth estimates, occlusion), palette, light, camera and emitters, plus a palette check against the pixels | Review the model's understanding before any pixels are cut; rerun with a different `max_layers` or brief |
+| `layers.json` | Per-layer coverage, hidden-area fill ratio, confidence, labelling record and manual edits | Audit the segmentation; find layers that need a mask correction |
+| `assets/*.png`, `masks/*.png` | One full-size transparent PNG and one mask per layer | Use the cut-outs in any engine or editor; they restack to the original exactly |
+| `review/layer_map.png` | The layers as solid colours, plus the overlay and the numbered regions the model saw | Check the result at a glance; spot a wrong region |
+| `scene.json` | Depths, camera, safe tilt and parallax limits, lighting and presets, materials and glow maps | Load it in the viewer, or in your own Three.js code; it is validated against `schemas/scene.schema.json` |
+| `DESIGN_SPEC.md` | A design spec (visual concept, structure, lighting, materials, interaction, implementation, change log) generated from the scene | Hand it to a team; it stays consistent with `scene.json` because both come from the same data |
+| `export/<name>-web/` + `.zip` | A standalone Vite + React + Three.js project | `npm ci && npm run build`, then host `dist/` anywhere |
 
-Every tool returns a JSON envelope: `{"ok": true, "data": …, "warnings": […]}` or
-`{"ok": false, "error": {"code", "message", "retryable", "details"}}`. Error
-codes include `image_format`, `image_too_large`, `model_unavailable`,
-`model_output_invalid`, `segmentation_failed`, `scene_invalid`,
-`asset_missing`, `viewer_build_failed`, `export_failed`, `path_forbidden`,
-`precondition_failed` and `not_implemented`. See `core/errors.py`.
+A real Hermes run on a 1672 × 941 lighthouse-harbour papercut (plugin 0.9.1, `gpt-6.1-sol`) produced
+these seven layers:
 
-## Claude Code plugin
+| Order | Layer | Share of the image |
+|---:|---|---:|
+| 0 | `sky`: sunset, light rays and clouds | 27.5% |
+| 1 | `distant_coast`: far hills and the far shore | 3.4% |
+| 2 | `sea`: water, waves and two sailboats | 13.9% |
+| 3 | `left_headland`: the lighthouse cape, path and rocks | 15.6% |
+| 4 | `harbor_village`: houses, pier and fishing boats | 5.2% |
+| 5 | `framing_tree`: the large tree on the left | 10.3% |
+| 6 | `foreground`: flowers, fence, beach and rocks | 24.3% |
 
-In Claude Code, two of the steps hand Claude the image and wait for its answer. The answer then
-goes through the same validation, repair and second labelling round as in Hermes. The MCP server
-(`claude/server.py`) uses only the Python standard library, so it always starts. The imaging
-libraries live in a virtualenv in the plugin's data folder. For installation, see
-[Option B](#option-b-claude-code).
+In that run the sailboats were placed in the wrong layers. This is exactly the kind of error the
+`layer_map.png` review exists for, and a painted mask corrects it. The cause has been addressed in
+0.9.2; see [Current Status](#current-status--limitations).
 
-| Claude Code tool | What it does |
+## Architecture
+
+```mermaid
+flowchart LR
+    H["Hermes Agent<br/>model access · orchestration"] -->|"tool calls"| P["Python plugin<br/>six tools"]
+    P --> I["Image processing<br/>regions · layers · fill · light"]
+    I --> S[["Scene schema<br/>scene.json"]]
+    S --> V["Three.js viewer<br/>and exported site"]
+    S --> D["DESIGN_SPEC.md"]
+```
+
+- **Hermes Agent** handles model calls and tool orchestration. The plugin never holds API keys; it asks
+  your configured vision model through `ctx.llm`.
+- **The Python plugin** does the image processing, validation and output: region computation, layer
+  extraction, hidden-area fill, light calibration, patch checks and export. It runs no shell commands.
+- **The JSON Schema** (`schemas/scene.schema.json`) is the shared source of truth. The plugin validates
+  against it, the viewer validates the same file at load time, and the spec is generated from a
+  validated scene.
+- **Three.js** provides the interactive view: tilt, parallax, an exploded view and lighting presets.
+- **The design spec** stays in sync with the scene parameters. It records the scene's fingerprint, so a
+  stale spec is detected.
+
+The same pipeline also runs as a **Claude Code plugin**, with Claude as the vision model. The
+algorithms, error handling, colour checks, lighting model, region merging and security design are in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Current Status & Limitations
+
+**Version 0.9.2.** All six tools are implemented. **176 automated tests** pass; they use a fake vision
+model and an oracle labeller, plus replies recorded from real runs. The per-file breakdown is in
+[TEST_REPORT.md](docs/TEST_REPORT.md).
+
+**Verified in a real Hermes install** (Hermes 0.22.7 on Windows, plugin 0.9.1):
+
+- The plugin installed. `hermes plugins validate` and `hermes plugins doctor` passed with exit code 0,
+  and all six tools registered.
+- `papercraft_analyze` ran with a real vision model (`openai-codex / gpt-6.1-sol`).
+- `papercraft_segment` ran with a real vision model and produced a true layered result (not the preview
+  fallback). That result had seven layer PNGs, seven masks and `layers.json`, and the second labelling
+  round ran in three batches.
+- **The segmentation quality has not passed human review.** The sailboats landed in the wrong layers.
+- `papercraft_build_scene`, `papercraft_generate_plan`, `papercraft_update_scene` and
+  `papercraft_export_project` have **not yet been run in Hermes**.
+
+So not all six tools have been accepted in a real Hermes environment yet.
+
+**Verified with the Claude Code host** (Claude as the vision model, plugin 0.8–0.9):
+
+- Analysis, segmentation, scene building, the spec and export ran end to end on three real papercuts:
+  a lighthouse harbour, a Japanese village and a night forest. The village run also applied a
+  natural-language night edit with `papercraft_update_scene`.
+- Claude reported its own layer mistakes. In one run it corrected a layer with a painted mask.
+- The analyses and labels from these runs are recorded as regression tests.
+
+**Changes since the Hermes run (0.9.2, covered by automated tests and an offline evaluation):**
+
+- Merged regions whose pieces are clearly different colours are now split before numbering. This is
+  the cause of the sailboat error.
+- On the three real images, the share of numbered-region pixels that belong to another layer fell from
+  0.019 to 0.015 on the lighthouse and stayed level on the village and the forest.
+
+**Limitations:**
+
+- **2.5D, not a mesh.** Layers are flat transparent planes. There are no back faces, so the view is
+  limited to a safe tilt range.
+- **Layer quality depends on the model and the art.** Very detailed images force coarse regions. Pieces
+  of nearly the same colour (pink blossoms against a pink sky) and objects smaller than a numbered
+  region can land in the wrong layer. Always check `review/layer_map.png`; painted masks fix errors.
+- **Hidden areas are filled, not recovered.** What a nearer layer covered is interpolated from the
+  layer's own pixels, within a margin, and painted shadows stay where the artist put them.
+- **Images up to 10 MB and 40 megapixels**, in PNG, JPEG or WebP.
+
+## Roadmap: Toward a Blender Pipeline
+
+**Today:**
+
+```mermaid
+flowchart LR
+    A["AI image"] --> B["Semantic layers"] --> C["Three.js 2.5D scene"]
+```
+
+**Planned (not implemented yet):**
+
+```mermaid
+flowchart LR
+    A["AI image"] --> H["Hermes Agent"] --> S["Segmentation"]
+    S --> C["Contour extraction"]:::planned
+    C --> B["Blender mesh generation"]:::planned
+    B --> G["GLB"]:::planned
+    G --> T["Three.js"]
+    classDef planned stroke-dasharray: 5 5
+```
+
+The layers and masks already describe *what* each part of the scene is and *where* it sits. The next
+stage turns that description into geometry. The planned building blocks:
+
+| Planned | Purpose |
 |---|---|
-| `papercraft_status` | Setup check and project list |
-| `papercraft_analyze_begin` / `_submit` | Returns the image and the schema. Claude submits the analysis, which goes through the same validation and repair round |
-| `papercraft_segment_begin` / `_submit` | Returns the numbered regions. Claude submits the labels; uncertain regions come back for a second round. Returns the overlay to review |
-| `papercraft_segment_correct` | Manual mask corrections |
-| `papercraft_build_scene`, `_generate_plan`, `_update_scene`, `_export_project` | The same as the Hermes tools |
+| Mask-to-contour conversion | Clean outlines from each layer mask |
+| SVG / shape extraction | Editable vector shapes for each cut-out |
+| Mesh extrusion | Paper-thickness solids instead of flat planes |
+| Topology validation | Watertight, manifold meshes that later tools can trust |
+| Procedural materials | Paper fibre, edge darkening and translucency |
+| Automated lighting | Scene lights derived from the analysed light and emitters |
+| GLB export | A standard asset for engines, AR and the web |
+| Three.js integration | Loading the GLB into the same viewer and export |
 
-## Hermes details
+Blender matters here for more than the GLB file. It makes the geometry **editable, stable and ready for
+further production**: an artist can open the result, fix a shape, add a bevel or re-light it. The plugin
+does not have to solve every case perfectly.
 
-Python dependencies (`Pillow`, `numpy`, `jsonschema`, `scipy`, `scikit-image`)
-are declared in `pyproject.toml` with bounded ranges compatible with Hermes's
-core pins. Hermes asks for consent before it
-installs them. The full test procedure is in
-[`docs/HERMES_TEST_PLAN.md`](docs/HERMES_TEST_PLAN.md).
+Before that, the near-term work:
 
-### Plugin settings
+- Complete the Hermes acceptance of `build_scene`, `generate_plan`, `update_scene` and `export_project`.
+- Add real showcase captures and a demo video.
+- Submit the Hermes plugin catalog entry ([draft](docs/catalog/papercraft-3d.yaml)).
+- Handle objects smaller than a numbered region.
 
-Settings go under `plugins.entries.papercraft-3d.settings` (the Desktop app also shows them under **Settings → Plugins**):
+## Documentation
 
-| Key | Default | Meaning |
-|---|---|---|
-| `workspace_dir` | plugin data dir | Where projects are written. Generated files never go into the plugin's install tree |
-| `segmentation_backend` | `builtin` | `builtin` (regions computed locally, labelled by your Hermes vision model) or `http` (your own service, see [docs/SEGMENTATION_HTTP.md](docs/SEGMENTATION_HTTP.md)) |
-| `segmentation_url` | — | `https://`, or `http://` on localhost, for the `http` backend |
-| `segmentation_timeout_s` | `300` | Timeout for the `http` backend |
-| `max_image_mb` | `10` | Upload limit (hard-capped at 10 MB in the MVP) |
-| `analysis_timeout_s` | `180` | Timeout per vision-model call (10–600 s) |
+| Document | Contents |
+|---|---|
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Setup for both hosts, settings, preview and build, troubleshooting, development setup |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, the analysis, segmentation, scene and editing pipelines, security and privacy |
+| [docs/TEST_REPORT.md](docs/TEST_REPORT.md) | Automated test coverage and the results of real runs |
+| [docs/HERMES_TEST_PLAN.md](docs/HERMES_TEST_PLAN.md) | The step-by-step acceptance procedure in Hermes (Traditional Chinese) |
+| [docs/SEGMENTATION_HTTP.md](docs/SEGMENTATION_HTTP.md) | The contract for plugging in your own segmentation service |
+| [docs/SUBMISSION.md](docs/SUBMISSION.md) | The Hermes Plugin Hackathon 2026 submission and disclosures |
+| [docs/media/README.md](docs/media/README.md) | The showcase shot list |
 
-## Viewer
+## Contributing
 
-```bash
-cd viewer
-```
+Issues and pull requests are welcome.
 
-```bash
-npm install
-```
+- **Report a layering problem** with the project's `review/layer_map.png`, `layers.json` and
+  `segmentation/regions.json` (and the source image, if you can share it). Real failure cases are the
+  most valuable input this project gets.
+- **Before a pull request,** run the test suite. The [development setup](docs/INSTALLATION.md#development-setup)
+  explains how. If you change the viewer, also run `npm run build` in `viewer/`.
+- **Two rules hold the design together.** Never return `"ok": true` for work that was not done.
+  `schemas/scene.schema.json` is the contract, so update the schema and `viewer/src/types/scene.ts`
+  together.
 
-```bash
-npm run dev
-```
+## 中文簡介
 
-The viewer opens `?scene=<url of scene.json>`. With no parameter it loads the
-bundled **synthetic fixture** (`viewer/public/scenes/fixture`). The fixture is
-drawn procedurally by `examples/make_synthetic_fixture.py`, has known
-ground-truth layers, and is labelled as such. It is not pipeline output.
+PaperCraft 3D 是 Hermes Agent 外掛，也可以在 Claude Code 使用。它把一張 AI 紙雕圖拆成有語意的深度圖層、可互動的 Three.js 場景、和場景數值一致的企劃書（`DESIGN_SPEC.md`），以及可以獨立建置的網頁專案。場景做好後可以用一句話修改，例如「改成夜晚、藍色月光」。
 
-Features: a left scene tree (visibility, selection), a central orthographic
-view with limited orbit and zoom, mouse parallax, an exploded view, a light
-intensity control, a shadows toggle, day/night presets, camera reset, and a
-responsive phone layout. The viewer's controls only change the preview.
-Lasting changes go through `papercraft_update_scene`.
-
-## Tests
-
-For development only; users do not need this. From the repository root:
-
-```bash
-python -m venv .venv
-```
-
-```bash
-.venv/bin/pip install "Pillow>=10.1,<14" "numpy>=1.26,<3" "jsonschema>=4.18,<5" "scipy>=1.11,<2" "scikit-image>=0.24,<0.28" "pytest>=8,<10" "PyYAML>=6,<7"
-```
-
-```bash
-.venv/bin/python -m pytest tests
-```
-
-On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\python`. The suite (170 tests, about
-3 minutes) covers the following:
-
-- **Plugin contract.** Manifest and registration parity, mirroring `hermes plugins validate`.
-  Handlers never raise and always return JSON strings. The catalog draft and the Claude Code
-  manifest match the plugin.
-- **Security.** Path confinement, including symlink escapes. Image validation: format spoofing,
-  truncation, and size limits. Asset paths in the scene schema: no traversal, no URLs.
-- **Each stage, end to end.** A fake vision model replays recorded and scripted replies, and an
-  oracle labeller reads the synthetic fixture's ground truth. This covers segmentation accuracy
-  and IoU, scene limits recomputed from `scene.json`, the spec agreeing with the scene, Scene Patch
-  rules and history, and an export free of absolute paths.
-- **Claude Code server.** The MCP handshake, the setup message when libraries are missing, and the
-  two-phase begin/submit flow.
-- **Real cases.** Analysis replies and region labels recorded from Claude on three real images,
-  plus small crops of ten real lamps, lanterns, windows and moons, which pin the glow maps.
-
-The viewer is checked with `cd viewer && npm run build` (TypeScript and Vite).
-
-## How analysis works
-
-1. The image is validated, copied read-only into a new project, and a copy
-   downscaled to 1536 px on its long side is sent to **your active Hermes
-   model** through `ctx.llm`. If that model is text-only, Hermes routes the
-   call to your configured vision model.
-2. The reply must pass `schemas/analysis.schema.json` and semantic checks:
-   unique ids and orders, `x0 < x1`, at most `max_layers` layers, and
-   occlusion consistent with order. If it fails, the model gets **one** repair
-   attempt that lists the exact errors. If that also fails, the tool returns
-   `model_output_invalid` and writes no `analysis.json`.
-3. Before the call, the plugin clusters the real pixels (k-means in CIE Lab,
-   deterministic) into up to 12 colours. It stores them in `measured.palette`
-   and gives them to the model as candidates. Afterwards, every palette colour
-   the model returns is checked against every colour covering at least 0.2% of
-   the pixels. The result is returned as `palette_check`, and colours that are
-   not found become `needsReview` items.
-4. `light.emitters` lists elements that should glow (a drawn sun, lanterns,
-   lit windows), each with its layer, bbox and colour, for the scene builder.
-5. Every raw model reply is kept in `logs/analysis_reply_N.txt`, and each
-   attempt is logged in `logs/process.jsonl`.
-
-## Preview a project
-
-`papercraft_build_scene` returns the exact command. In the plugin's `viewer`
-folder, after a one-time `npm install`:
-
-```powershell
-$env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev
-```
-
-```bash
-PAPERCRAFT_PROJECT="<project_dir>" npm run dev
-```
-
-Then open `http://localhost:5173/?scene=project/scene.json`. The dev server
-serves that one folder, read-only, at `/project/`, and serves only image, JSON
-and Markdown files inside it.
-
-## How the scene is built
-
-- **Depth.** The analysed `depthEstimate` values are scaled by
-  `depth_spacing`, and the image is 8 world units tall.
-- **Safety bounds.** Segmentation completed every layer `fill.marginPx` behind
-  nearer layers. The camera tilt limit is the largest angle at which two
-  overlapping layers shift by at most 60% of that margin. Parallax gets the
-  other 40%. Both are rounded down, and `scene.limits` records the resulting
-  shifts. A test recomputes them from `scene.json`.
-- **Edges.** The viewer clips drawing to the back layer's rectangle, like the
-  frame of a shadow box. It also extends every layer past the image edge by
-  mirroring, so a moving layer never ends abruptly at the border.
-- **Light.** The art already has painted light. Ambient plus key light is set
-  to a total irradiance of about 3.0 (π gives the unlit texture colour), with
-  55% ambient and 45% directional for real shadows between layers. The key's
-  direction and colour come from the analysed azimuth, elevation and colour
-  temperature. Night is cool moonlight with a backlight.
-- **Glow.** For each analysed emitter, only pixels inside its box that are both
-  bright and close to its colour glow. The box itself never glows. The hottest
-  part of a light is usually drawn nearly white, so very bright pixels tinted
-  towards the emitter's hue also glow when they connect to that colour, and a
-  white centre fully enclosed by glow is filled in. Untinted white paper next to
-  a lamp stays dark. `emissiveScale` makes lights brighter at night.
-
-## Editing a scene in plain language
-
-The agent turns the request into JSON Patch operations, and `papercraft_update_scene` handles the rest:
-
-- **Validation.** Every path must be on an allow-list: lighting, presets,
-  interaction, rendering, camera zoom and tilt, and layer depth, parallax and
-  material. Assets, masks, the source image, ids, provenance and derived data
-  are protected. The whole patch is checked against the scene schema and the
-  semantic rules, and a failure writes nothing.
-- **Conveniences.** Layers can be addressed by id (`/layers/red_bridge/depth`).
-  `{"$preset": "night"}` copies a preset. Using `replace` on an optional field
-  that is not set yet is treated as `add`.
-- **Consistency.** If only the key colour changes, its stale colour temperature
-  is dropped. Edited lighting is labelled `custom`.
-- **Safety bounds.** If the edit would let layers shift past the filled margin,
-  the plugin lowers whichever of tilt or parallax the user did not ask for, and
-  reports it. If both were requested explicitly, the edit is refused with the
-  numbers, unless `respect_limits=false`.
-- **History.** Before each change the previous scene is saved as
-  `history/scene.rev<N>.json`, and `history/patches.jsonl` records the request,
-  the operations, the diff and any adjustments. `revert_to` restores an older
-  revision as a new one.
-- **Spec and viewer.** `DESIGN_SPEC.md` is regenerated and gains section G
-  (change log). An open viewer polls `scene.json` and reloads within about
-  2 seconds.
-
-## How segmentation works
-
-1. **Regions on your machine.** Felzenszwalb graph segmentation runs on a
-   1024 px working copy and follows the paper cut lines. A Ward-style
-   agglomerative merge then joins similar neighbours, cheapest first,
-   recomputing region means after every merge. This leaves 40–120 significant
-   regions, depending on the number of layers. A transitive threshold merge
-   was dropped: on a real image it chained pink sky, blossoms, snow and rock
-   into one region covering 50% of the picture.
-   On detailed art the merge must be coarse to stay within the number budget,
-   so a region can still join clearly different pieces. One real example joined
-   a white sail, the pink coast behind it and the sun's gold reflection; its one
-   number sat on the coast, so the sail was labelled as coast. Such regions are
-   split again by colour group and connectivity before the numbers are drawn.
-   The clearest cases go first, with at most 3 parts per region and at most 12
-   extra numbers.
-2. **Labels from your vision model (Set-of-Mark).** The model gets the original
-   image and a copy with each region outlined and numbered, plus the layer plan
-   from `analysis.json`. It answers "region 12 → `red_bridge`". The answer is
-   validated, with one repair round. Small regions inherit the layer of the
-   neighbour they share the longest border with.
-   **Second round:** regions the model marks as mixing layers (for example sky
-   showing between blossoms) are split into smaller parts along the original
-   fine segments. The model gets one more image with only those parts bright
-   and numbered (`review/refine_marks.png`).
-   **Colour check:** the model does not always notice a mixed region, so the
-   plugin also checks every labelled region itself. It splits the region into
-   two colour groups. If one group matches an adjacent region of *another* layer
-   much better than anything of its own layer, the region joins the second round
-   (up to 3 extra regions; `labelling.autoFlagged` lists them).
-   **Batches:** the second round is sent in batches of at most 36 numbered parts
-   (`review/refine_marks.png`, `refine_marks_2.png`, …), each region's parts
-   together, so the numbers stay readable. A failed batch keeps the first-round
-   labels for its regions only. Lightness counts
-   for half, so a cast shadow (a darker shade of the same paper) is not mistaken
-   for another layer. With perfect labels on the synthetic fixture it flags
-   nothing; on the real village image it caught the blossom-and-sky region the
-   model had missed.
-3. **Full-resolution edges.** The map is upsampled and the pixels on layer
-   boundaries are reassigned by local colour similarity. Isolated specks are
-   removed.
-4. **Hidden-area fill.** The farthest layer is completed everywhere. Every
-   other layer except the nearest is extended 5% of the image's long side
-   behind nearer layers, and the extension is filled by push-pull interpolation
-   from the layer's own pixels, skipping the cast-shadow band. Owned pixels are
-   never changed. `fill.marginPx` tells the scene builder how far layers may
-   shift relative to each other before an unfilled gap could show.
-5. **Review and correct.** `review/overlay.png` (colour-coded layers over the art),
-   `review/layer_map.png` (the same layers as solid colours, unambiguous) and
-   `review/marks.png` (what the model saw) are written. To fix a layer, paint a
-   mask and call `papercraft_segment` again with `manual_masks`. The previous
-   ownership is reused without calling the model again, and the layer is
-   recorded as `manual`.
-
-Measured with perfect labels on the synthetic fixture at 480–2400 px wide, the
-pipeline reaches 98.6–98.9% pixel accuracy, with every layer's IoU at or above
-0.90. Restacking the layers reproduces the source image pixel for pixel, and a
-test enforces this. This measures the regions, edges and fill, not the model. On real images
-the result depends on how well your vision model labels the regions, so always
-check `review/overlay.png`.
-
-## Security & privacy
-
-- **No API keys in the plugin.** Image analysis runs through Hermes's
-  `ctx.llm`, which uses the model and credentials you already configured in
-  Hermes. The image goes only to that provider.
-- **No undeclared network calls.** Segmentation runs locally by default.
-  The `http` backend contacts only the HTTPS URL you set.
-- **No shell commands.** The plugin never runs a subprocess, and never builds
-  a command from file names or model output. Export only copies files; you run
-  `npm` yourself.
-- **Confined output.** Every write is resolved inside the workspace
-  (`core/security.resolve_within`). The original upload is stored read-only and
-  never modified.
-- **Untrusted model output.** Model output is validated against JSON Schema
-  before use. Asset paths in `scene.json` must be relative, with no `..` and
-  no URLs.
-
-## Limitations
-
-A scene built from transparent layers is **2.5D**: stacked cut-out planes, not
-a 3D mesh with back-face topology. GLB export (planned, optional) will contain
-the same planes.
-
-## Roadmap
-
-1. ✅ Plugin skeleton: manifest, registration, schemas, security, tests, viewer scaffold
-2. ✅ Image analysis (`ctx.llm` vision → `analysis.json`)
-3. ✅ Layer conversion (masks, transparent layers, hidden-area fill, manual corrections)
-4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
-5. ✅ Design spec generator (zh-TW / en, verified against scene.json)
-6. ✅ Natural-language Scene Patch (`papercraft_update_scene`), with a live-reloading viewer
-7. ✅ Export, test report, demo script, catalog entry draft
-8. ✅ Claude Code plugin (Claude as the vision model), tested end to end on a real image
-
-Still to do: a real-Hermes run of every stage, the demo video, and the catalog PR.
-
-## 中文摘要
-
-PaperCraft 3D 能把一張 AI 紙雕圖做成可以互動的 Three.js 2.5D 網頁場景，可以裝在 Hermes Agent 或 Claude Code 裡用。它會產生以下成果：
-
-- 每一層的透明圖檔
-- `scene.json` 場景檔
-- 企劃書 `DESIGN_SPEC.md`，內容和場景完全一致
-- 可以獨立建置的網頁專案
-
-場景做好後，也可以直接用一句話修改，例如「改成夜晚、藍色月光」。任何步驟失敗都會明確回報錯誤，不會假裝成功。
-
-**安裝（擇一）：**
-
-- **Hermes**：執行 `hermes plugins install than0112/papercut-plugin --enable`，同意安裝 Python 套件，然後重新啟動 Hermes。Hermes 需要先設定好支援圖片的模型。
-- **Claude Code**：依序執行 `claude plugin marketplace add than0112/papercut-plugin` 和 `claude plugin install papercraft-3d@papercraft`，然後開一個新的對話。第一次使用時，Claude 會請你同意安裝影像套件。Windows 如果無法用 `python3` 啟動 Python，請用 `/plugin configure papercraft-3d@papercraft` 把 Python 指令改成 `python` 或 `py`。
-
-**預覽與建置：**
-
-- 預覽場景需要 Node.js 20.19 以上。先在外掛的 `viewer` 資料夾執行一次 `npm install`，再照建場景步驟回傳的指令啟動預覽。
-- 匯出的網頁專案，在匯出資料夾執行 `npm ci` 和 `npm run build` 即可。
+目前的成果是 2.5D 分層場景，還不是完整的 3D 模型，長期目標是透過 Blender 產生可編輯的幾何模型。安裝方式見上方 [Quick Start](#quick-start)，詳細說明見 [docs/INSTALLATION.md](docs/INSTALLATION.md)。
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 youhong

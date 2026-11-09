@@ -1,8 +1,8 @@
 # Test report: PaperCraft 3D v0.9.2
 
 The automated results below were produced in the development container
-(Python 3.13, Node 22), last on 2026-11-09. Section 3 lists what has and has not been
-run in a real Hermes install. Fill in the remaining rows with
+(Python 3.13, Node 22), last on 2026-11-09. Section 3 covers the Claude Code host on real images,
+and section 4 lists what has and has not been run in a real Hermes install. Fill in the remaining rows with
 [HERMES_TEST_PLAN.md](HERMES_TEST_PLAN.md).
 
 ## 1. Automated tests: 176 passed, 0 failed
@@ -63,9 +63,34 @@ Known from these runs:
   - Claude listed the remaining errors itself: a roof and a lantern cap went into the blossom-frame layer.
 - In both re-runs, Claude drew its own solid-colour layer map. The tinted overlay can shift colours: blue over a pink sky looks like the purple bridge layer. **Since 0.9.1** the plugin writes `review/layer_map.png` and returns it next to the overlay.
 - Low-confidence glow emitters (mushrooms) also light their pale cap spots.
-- **First real Hermes segmentation (user, gpt-6.1-sol, plugin 0.9.1, lighthouse image).**
-  - The result was layered, the second round ran in 3 batches, and the colour check flagged 3 regions.
-  - The big sailboat went into the wrong layer. The first-round region holding its sail also held the distant coast and the sun's reflection on the sea, and its number sat on the coast.
+
+## 4. Real Hermes (0.22.7, Windows), run by the user
+
+| Hermes test plan item | Status |
+|---|---|
+| 1. Install, `hermes plugins validate`, `hermes plugins doctor` | ✅ plugin 0.9.1: both passed with exit code 0; `doctor` reported 6 tools registered |
+| 2. `papercraft_analyze` with a real vision model | ✅ `openai-codex / gpt-6.1-sol`, accepted on the first attempt (plugin v0.2, prompt v1). The 0.9.1 segmentation run below used a seven-layer analysis of the lighthouse image |
+| 2b. `papercraft_segment` | ⚠️ ran with plugin 0.9.1 (details below); a true layered result, but the quality review did not pass |
+| 3. `papercraft_build_scene` and the viewer | ⬜ to do |
+| 4. `papercraft_generate_plan` | ⬜ to do |
+| 5. `papercraft_update_scene` | ⬜ to do |
+| 6. `papercraft_export_project` on a clean machine | ⬜ to do |
+| Acceptance: three different test images | ✅ three images end to end with the Claude Code plugin (section 3); in Hermes, one image so far |
+
+Finding the tools in Hermes: plugin tools sit behind Tool Search, so the agent finds them with
+`tool_search` and runs them with `tool_call`. After the dependencies were installed, the running gateway
+still held the earlier failed load (`No module named 'scipy'`). `hermes gateway restart` made the tools
+available.
+
+**`papercraft_segment` in Hermes (user, `gpt-6.1-sol`, plugin 0.9.1, lighthouse image, 1672 × 941):**
+
+- Seven layer PNGs, seven masks and `layers.json` were written, in layered mode (not the preview fallback), with `allow_preview_fallback` set to false.
+- The first round marked 105 regions. The second round refined 5 regions in 3 batches, and the colour check added 3 of them (`autoFlagged`).
+- Review: the lighthouse, the harbour village and the framing tree were in their planned layers.
+- Open items: two possible mistakes still need a closer check, the edges of the small harbour objects and a green patch at the tree's left edge.
+- Detailed findings and the fix:
+  - The near sailboat came out mostly in `sky`, and the far one partly in `distant_coast`, instead of `sea`.
+  - Reproduced offline on the same image: the big sailboat went into the wrong layer. The first-round region holding its sail also held the distant coast and the sun's reflection on the sea, and its number sat on the coast.
   - **Since 0.9.2**, merged regions whose pieces are clearly different colours are split before numbering. That region now gets separate numbers for the boat, the coast and the reflection.
   - On the three real images, the share of numbered-region pixels that belong to another layer was compared with the reviewed owner maps from the earlier runs:
 
@@ -78,15 +103,3 @@ Known from these runs:
   - The remaining mixes are pieces of nearly the same colour (pink blossoms against a pink sky), which colour cannot separate. They rely on the second round and the colour check.
   - The far sailboat is smaller than the smallest numbered region, so it still takes a neighbour's layer. A manual mask fixes it.
 
-## 4. Real Hermes (0.22.7, Windows), run by the user
-
-| Hermes test plan item | Status |
-|---|---|
-| 1. Install, `hermes plugins validate` | ✅ passed. The user reported "Validation passed" and exit code 0 |
-| 2. `papercraft_analyze` with a real vision model | ✅ ran twice on `openai-codex / gpt-6.1-sol`, accepted on the first attempt (plugin v0.2, prompt v1) |
-| 2b. `papercraft_segment` | ⬜ to do with v0.7.0 |
-| 3. `papercraft_build_scene` and the viewer | ⬜ to do |
-| 4. `papercraft_generate_plan` | ⬜ to do |
-| 5. `papercraft_update_scene` | ⬜ to do |
-| 6. `papercraft_export_project` on a clean machine | ⬜ to do |
-| Acceptance: three different test images | ✅ three images, end to end with the Claude Code plugin (section 3); in Hermes, one image so far |

@@ -93,16 +93,21 @@ edit, say: "把場景改成夜間，使用冷色月光，降低環境亮度". Ex
 ## Verification status
 
 - Automated: see [TEST_REPORT.md](TEST_REPORT.md).
-- In a real Hermes 0.22.7 install:
-  - Plugin install and `hermes plugins validate` passed.
-  - `papercraft_analyze` ran against `openai-codex / gpt-6.1-sol` on a real
-    image (the plugin version at the time used the v1 prompt).
-  - The later stages are still to be run in Hermes. They were exercised end to
-    end on the same real image, with the model replies supplied by hand.
+- In a real Hermes 0.22.7 install (Windows):
+  - With plugin 0.9.1, install, `hermes plugins validate` and `hermes plugins doctor` passed with
+    exit code 0, and all six tools registered.
+  - `papercraft_analyze` ran against `openai-codex / gpt-6.1-sol` on a real image.
+  - `papercraft_segment` ran with the same model and produced a true layered result: seven layer
+    PNGs, seven masks and `layers.json`, with the second round in three batches. Its quality did
+    not pass review, because the sailboats landed in the wrong layers. The cause is addressed in
+    0.9.2, and a painted mask corrects the run.
+  - `papercraft_build_scene`, `papercraft_generate_plan`, `papercraft_update_scene` and
+    `papercraft_export_project` are still to be run in Hermes. They were exercised end to end on
+    the same real image with the model replies supplied by hand, and with the Claude Code host.
 - As a Claude Code plugin, with Claude as the vision model:
-  - Every stage ran end to end on three real images: a lighthouse harbour, a
-    Japanese village and a night forest. Claude also ran the setup and an edit,
-    and corrected a layer with a mask on its own.
+  - Analysis, segmentation, scene building, the spec and export ran end to end on three real
+    images: a lighthouse harbour, a Japanese village and a night forest. On the village, Claude
+    also applied a night edit, and it corrected a layer with a mask on its own.
   - The analyses and labels from these runs are recorded as regression tests.
 
 ## Known limitations
