@@ -1,0 +1,13 @@
+{
+  "name": "papercraft",
+  "description": "PaperCraft 3D: paper-cut image to interactive Three.js scene.",
+  "owner": { "name": "than0112", "url": "https://github.com/than0112" },
+  "plugins": [
+    {
+      "name": "papercraft-3d",
+      "source": "./",
+      "description": "Paper-cut image to a layered, interactive Three.js 2.5D scene with design spec, natural-language edits and export.",
+      "category": "creative"
+    }
+  ]
+}

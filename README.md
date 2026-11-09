@@ -52,7 +52,36 @@ codes include `image_format`, `image_too_large`, `model_unavailable`,
 `asset_missing`, `viewer_build_failed`, `export_failed`, `path_forbidden`,
 `precondition_failed` and `not_implemented`. See `core/errors.py`.
 
-## Install (development)
+## Claude Code plugin
+
+The same repository is also a **Claude Code plugin**. In Claude Code the vision model is
+Claude itself: two of the steps hand Claude the image and wait for its answer.
+
+```bash
+claude plugin marketplace add than0112/papercut-plugin
+```
+
+```bash
+claude plugin install papercraft-3d@papercraft
+```
+
+Or, inside Claude Code: `/plugin install papercraft-3d --marketplace than0112/papercut-plugin`.
+
+Then ask, for example: "用 PaperCraft 3D 把 ./my-papercut.png 做成 Three.js 紙雕場景". On first
+use, `papercraft_status` returns two commands that install the imaging libraries into the
+plugin's data folder. Claude runs them with your permission, and no restart is needed. The MCP
+server (`claude/server.py`) uses only the Python standard library. Under `/config` you can set
+the Python command (`python` or `py` on Windows) and the workspace folder.
+
+| Claude Code tool | What it does |
+|---|---|
+| `papercraft_status` | Setup check and project list |
+| `papercraft_analyze_begin` / `_submit` | Returns the image and the schema. Claude submits the analysis, which goes through the same validation and repair round |
+| `papercraft_segment_begin` / `_submit` | Returns the numbered regions. Claude submits the labels; uncertain regions come back for a second round. Returns the overlay to review |
+| `papercraft_segment_correct` | Manual mask corrections |
+| `papercraft_build_scene`, `_generate_plan`, `_update_scene`, `_export_project` | The same as the Hermes tools |
+
+## Install in Hermes (development)
 
 Requirements: Hermes Agent `>=0.22`, Python ≥ 3.11, and Node ≥ 20.19 (viewer only).
 

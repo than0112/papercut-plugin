@@ -129,3 +129,14 @@ def test_units():
     assert sb.layer_depths([0, 0.5, 0.4, 1], 0.6) == sb.layer_depths([0, 1 / 3, 2 / 3, 1], 0.6)
     two = sb.view_limits([0, 1], 100, 50, None, False)
     assert two["tilt_px"] == 0 and two["theta"] == pytest.approx(math.radians(sb.DEFAULT_MAX_TILT_DEG))
+
+
+def test_camera_note_when_analysis_suggests_another(tmp_path, fixture_dir, monkeypatch):
+    ctx, pid, pdir = _segmented(tmp_path, fixture_dir, monkeypatch)
+    analysis = json.loads((pdir / "analysis.json").read_text(encoding="utf-8"))
+    analysis["camera"]["type"] = "perspective"
+    (pdir / "analysis.json").write_text(json.dumps(analysis), encoding="utf-8")
+    cam = call(ctx, "papercraft_build_scene", {"project_id": pid})["data"]["camera"]
+    assert cam["type"] == "orthographic" and "perspective" in cam["note"]
+    cam = call(ctx, "papercraft_build_scene", {"project_id": pid, "camera": "perspective"})["data"]["camera"]
+    assert "note" not in cam

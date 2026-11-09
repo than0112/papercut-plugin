@@ -205,7 +205,15 @@ def build(project: Project, *, preset: str, camera_type: str, spacing: float) ->
         shutil.copyfile(project.path("scene.json"), project.path(f"history/scene.{stamp}.json"))
     project.write_json("scene.json", scene)
     project.log("scene_built", layers=len(scene_layers), mode=scene["mode"], preset=preset, camera=camera_type)
-    return scene, {"emitters": emitter_report}
+    return scene, {"emitters": emitter_report, "suggested_camera": analysis["camera"].get("type")}
+
+
+def _camera_summary(cam: dict[str, Any], suggested: str | None) -> dict[str, Any]:
+    out = {"type": cam["type"], "max_tilt_deg": round(math.degrees(cam["maxPolarAngle"]), 2)}
+    if suggested and suggested != cam["type"]:
+        out["note"] = (f"The analysis suggested a {suggested} camera; this build used {cam['type']} "
+                       f"(the 'camera' argument). Run papercraft_build_scene with camera='{suggested}' to follow it.")
+    return out
 
 
 def _summary(project: Project, scene: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
@@ -220,7 +228,7 @@ def _summary(project: Project, scene: dict[str, Any], report: dict[str, Any]) ->
         "mode": scene["mode"],
         "layers": [{"id": l["id"], "depth": l["depth"], "parallaxFactor": l["parallaxFactor"],
                     "glow": "emissiveMap" in l["material"]} for l in scene["layers"]],
-        "camera": {"type": cam["type"], "max_tilt_deg": round(math.degrees(cam["maxPolarAngle"]), 2)},
+        "camera": _camera_summary(cam, report.get("suggested_camera")),
         "parallax_strength": scene["interaction"]["parallax"]["strength"],
         "limits": scene["limits"],
         "lighting": {"active": scene["lighting"]["preset"], "presets": list(scene["lightingPresets"]),

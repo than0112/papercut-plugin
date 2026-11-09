@@ -22,6 +22,13 @@ and assets you own.
 | `papercraft_update_scene` | Applies a natural-language edit as a validated, atomic Scene Patch, with protected paths, safety-bound rebalancing, history and undo. The spec and change log are updated and the viewer reloads live. |
 | `papercraft_export_project` | Exports a standalone Vite + React + Three.js project (`npm ci && npm run build`). It uses relative paths only, which is checked. |
 
+## Also a Claude Code plugin
+
+The same repository installs as a Claude Code plugin (`.claude-plugin/`, `skills/papercraft`,
+`claude/server.py`). There, Claude is the vision model. The MCP server returns the image and
+the exact instructions, Claude submits its answer, and the plugin replays that answer through the
+same validation, repair and second labelling round. It is one pipeline with two hosts.
+
 ## Why it is trustworthy
 
 - **It never fakes success.** A failed stage returns a classified error

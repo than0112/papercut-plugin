@@ -1,0 +1,32 @@
+{
+  "name": "papercraft-3d",
+  "displayName": "PaperCraft 3D",
+  "version": "0.8.0",
+  "description": "Turn a paper-cut / papercraft image into a layered, interactive Three.js 2.5D scene: analysis, real per-layer cut-outs, scene.json, a matching design spec, natural-language edits and a standalone web export. Claude is the vision model.",
+  "author": { "name": "than0112", "url": "https://github.com/than0112" },
+  "homepage": "https://github.com/than0112/papercut-plugin#readme",
+  "repository": "https://github.com/than0112/papercut-plugin",
+  "license": "MIT",
+  "keywords": ["threejs", "3d", "papercraft", "image", "parallax", "2.5d"],
+  "mcpServers": {
+    "papercraft": {
+      "command": "${user_config.python_command}",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/claude/server.py"],
+      "env": { "PAPERCRAFT_WORKSPACE": "${user_config.workspace_dir}" }
+    }
+  },
+  "userConfig": {
+    "python_command": {
+      "type": "string",
+      "title": "Python command",
+      "description": "Python 3.11+ used to run the MCP server: python3 on macOS/Linux, python or py on Windows.",
+      "default": "python3"
+    },
+    "workspace_dir": {
+      "type": "string",
+      "title": "Workspace folder",
+      "description": "Where projects are written. Empty = papercraft-projects/ in the current project folder.",
+      "default": ""
+    }
+  }
+}

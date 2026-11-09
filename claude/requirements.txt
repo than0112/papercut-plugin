@@ -1,0 +1,7 @@
+# Imaging stack for the Claude Code MCP server (installed into the plugin data folder).
+# Same bounded ranges as pyproject.toml.
+Pillow>=10.1,<14
+numpy>=1.26,<3
+jsonschema>=4.18,<5
+scipy>=1.11,<2
+scikit-image>=0.24,<0.28

@@ -101,3 +101,13 @@ def test_catalog_draft_matches_manifest():
     assert sorted(entry["capabilities"]["provides_tools"]) == sorted(manifest["provides_tools"])
     assert entry["version"] == manifest["version"] and entry["requires_hermes"] == manifest["requires_hermes"]
     assert entry["name"] == manifest["name"] and entry["repo"].startswith("https://")
+
+
+def test_claude_plugin_manifest_matches():
+    """The Claude Code plugin ships the same version as the Hermes plugin."""
+    manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    assert manifest["name"] == "papercraft-3d" and manifest["version"] == plugin.__version__
+    assert manifest["mcpServers"]["papercraft"]["args"] == ["${CLAUDE_PLUGIN_ROOT}/claude/server.py"]
+    market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    assert market["plugins"][0]["name"] == manifest["name"] and market["plugins"][0]["source"] == "./"
+    assert (ROOT / "skills" / "papercraft" / "SKILL.md").read_text(encoding="utf-8").startswith("---\nname: papercraft\n")

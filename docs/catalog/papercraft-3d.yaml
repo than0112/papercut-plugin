@@ -10,7 +10,7 @@ tier: community
 category: tools
 requires_hermes: ">=0.22"
 docs_url: https://github.com/than0112/papercut-plugin#readme
-version: "0.7.0"
+version: "0.8.0"
 capabilities:
   provides_tools:
     - papercraft_analyze
