@@ -34,6 +34,8 @@ MIN_LABELLED_AREA = 0.8  # fraction of the marked area the labeller must cover a
 HTTP_MAX_RESPONSE = 64 * 1024 * 1024
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 COARSE_MERGE_LAB = 30.0  # a merge threshold above this means regions mix clearly different colours
+AUTO_REFINE_MAX = 3  # regions the colour check may add to the second round ...
+REFINE_TOTAL_MAX = 8  # ... up to this many regions in total (model-flagged ones first)
 
 
 def marks_for(n_layers: int) -> int:
@@ -87,8 +89,9 @@ def refine_instructions(layers: list[dict[str, Any]], n_parts: int) -> str:
     plan = "\n".join(f'- "{layer["id"]}" (order {layer["order"]}): {layer["name"]}. {layer["description"]}'
                      for layer in layers)
     ids = ", ".join(f'"{layer["id"]}"' for layer in layers)
-    return f"""Second pass of the same labelling task. Some regions mixed several depth layers, so they
-were split into smaller parts. Image 1 is the original. In image 2 everything else is darkened; only
+    return f"""Second pass of the same labelling task. Some regions seem to mix several depth layers
+(you marked them uncertain, or their colours match neighbours of different layers), so they were split
+into smaller parts. Judge each part afresh from the original image. Image 1 is the original. In image 2 everything else is darkened; only
 the parts to decide are bright, outlined and numbered 1 to {n_parts}.
 
 Assign EVERY numbered part to exactly one layer (order 0 = farthest):
@@ -186,6 +189,11 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
     min_px = seg.REFINE_MIN_AREA * regions.labels.size
     targets = sorted((r for r in uncertain_regions if regions.areas[r] >= min_px),
                      key=lambda r: -regions.areas[r])[:seg.REFINE_MAX_REGIONS]
+    # The model does not always notice a region that mixes layers; check the colours against the neighbours.
+    auto = [r for _, r in seg.mixed_suspects(regions, assignment, min_px) if r not in targets]
+    auto = auto[:max(0, min(AUTO_REFINE_MAX, REFINE_TOTAL_MAX - len(targets)))]
+    targets = targets + auto
+    regions_numbers = regions.numbers
     if targets:
         refined, parent, parts = seg.subdivide(regions, targets)
         if len(parts) >= 2:
@@ -216,6 +224,7 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
             regions = refined
             review_images["refine_marks"] = refine_img
             refine_info = {"regions": len(targets), "parts": len(parts), "labelled": len(part_labels),
+                           "autoFlagged": sorted(regions_numbers[r] for r in auto),
                            "problems": part_problems[:10]}
 
     work_map, how, per_region = seg.region_layer_map(regions, assignment)
@@ -247,7 +256,7 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
         owner=owner.astype(np.int16), confidence=confidence, method="builtin:felzenszwalb+set-of-mark",
         meta={"provider": result.provider, "model": result.model, "attempts": attempt,
               "regions": record["regions"], "marked": n_marks, "mergeThreshold": regions.merge_threshold,
-              "refined": refine_info.get("regions", 0)},
+              "refined": refine_info.get("regions", 0), "autoFlagged": refine_info.get("autoFlagged", [])},
         review_images=review_images, region_record=record, warnings=warnings,
     )
 

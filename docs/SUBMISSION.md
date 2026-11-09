@@ -16,7 +16,7 @@ and assets you own.
 | Tool | Result |
 |---|---|
 | `papercraft_analyze` | The user's vision model (via `ctx.llm`) plans 3–8 depth layers, occlusion, palette, light and emitters. The reply is schema-checked and repaired once if needed. Its colours are checked against the pixels. |
-| `papercraft_segment` | Regions are computed locally along the paper cut lines and labelled by the vision model (Set-of-Mark, with a second round for mixed regions). The result is full-size transparent layers, masks and hidden-area fill. Restacking the layers reproduces the source exactly. Supports manual mask corrections and an optional HTTP backend. |
+| `papercraft_segment` | Regions are computed locally along the paper cut lines and labelled by the vision model (Set-of-Mark, with a second round for mixed regions, which the plugin also detects itself by checking colours against neighbouring layers). The result is full-size transparent layers, masks and hidden-area fill. Restacking the layers reproduces the source exactly. Supports manual mask corrections and an optional HTTP backend. |
 | `papercraft_build_scene` | Builds `scene.json`. The camera tilt and parallax limits are derived from the fill margin, so gaps never show. Light is calibrated to the painted art, with day and night presets. Glow maps cover only the bright pixels of lanterns, windows and the sun. |
 | `papercraft_generate_plan` | Writes `DESIGN_SPEC.md` (sections A–G). Every number is read from `scene.json` and re-checked against it, and user notes are kept on regeneration. |
 | `papercraft_update_scene` | Applies a natural-language edit as a validated, atomic Scene Patch, with protected paths, safety-bound rebalancing, history and undo. The spec and change log are updated and the viewer reloads live. |

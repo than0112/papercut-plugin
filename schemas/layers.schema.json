@@ -238,6 +238,11 @@
         "service": {
           "type": "string"
         },
+        "autoFlagged": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "description": "First-round region numbers the plugin's colour check sent to the second round although the model had not flagged them."
+        },
         "reused": {
           "type": "boolean",
           "description": "Ownership was reused from the previous run (only manual masks changed)."

@@ -1,11 +1,11 @@
-# Test report: PaperCraft 3D v0.8.1
+# Test report: PaperCraft 3D v0.9.0
 
 The automated results below were produced in the development container
 (Python 3.13, Node 22), last on 2026-11-09. Section 3 lists what has and has not been
 run in a real Hermes install. Fill in the remaining rows with
 [HERMES_TEST_PLAN.md](HERMES_TEST_PLAN.md).
 
-## 1. Automated tests: 170 passed, 0 failed
+## 1. Automated tests: 172 passed, 0 failed
 
 ```bash
 .venv/bin/python -m pytest tests
@@ -17,7 +17,7 @@ run in a real Hermes install. Fill in the remaining rows with
 | `test_security.py` | 25 | Path confinement including symlink escapes, id rules, image validation (format spoofing, truncation, size and pixel limits), read-only source copy |
 | `test_scene.py` | 18 | The scene, analysis and layers JSON Schemas; path-traversal and URL assets rejected; semantic rules |
 | `test_analyze.py` | 19 | The `ctx.llm` contract (json_mode, no provider/model override), repair round, honest failure, retry by `project_id`, pixel palette check, emitters, the recorded **real model reply** |
-| `test_segment.py` | 20 | Oracle-labelled pipeline accuracy (pixel accuracy above 96%, every layer IoU above 0.88 at 480×320), **restacking the layers reproduces the source exactly**, fill, the second labelling round (blossom IoU below 0.6 without it, above 0.9 with it), manual masks, preview fallback, HTTP backend |
+| `test_segment.py` | 22 | Oracle-labelled pipeline accuracy (pixel accuracy above 96%, every layer IoU above 0.88 at 480×320), **restacking the layers reproduces the source exactly**, fill, the second labelling round (blossom IoU below 0.6 without it, above 0.9 with it, **also when the model flags nothing and the colour check sends the regions**), the colour check flags nothing on pure regions, manual masks, preview fallback, HTTP backend |
 | `test_build_scene.py` | 13 | **Tilt and parallax shifts recomputed from scene.json stay within the fill margin**, light direction, glow only inside the emitter box, a lamp's white-hot centre glows while white paper beside it does not, camera note, history, perspective, preview scenes |
 | `test_generate_plan.py` | 7 | The spec's tables parsed back and compared with scene.json, fingerprint and staleness, user notes kept, tampering detected, zh-TW and en |
 | `test_update_scene.py` | 22 | The test-plan request "night, cold moonlight, lower ambient", asset hashes unchanged, protected paths refused with nothing written, atomicity, rebalancing, revert, dry run |
@@ -55,7 +55,8 @@ A headless Claude Code session with the plugin ran each image from setup to expo
 
 Known from these runs:
 
-- A large region that mixes two layers (village: blossoms and sky in the top-right corner) goes to the second round only if the model flags it. Here the model did not, and the error was caught on the overlay instead.
+- A large region that mixes two layers (village: blossoms and sky in the top-right corner) went to the second round only if the model flagged it. Here the model did not, and the error was caught on the overlay instead. **Since 0.9.0** the plugin's colour check flags such regions itself. Replaying that run's first-round labels, it flags the region, and with perfect labels on the synthetic fixture it flags nothing.
+- Village re-run with 0.9.0, segmentation only. Claude flagged 5 large regions this time, and the colour check added 2. Sky recall against the hand-corrected sky of the first run was 0.69 (about 0.58 before the correction), with precision 0.94. The second round carried 99 numbered parts on one image, and Claude reported two numbers it could not find. **That round is too crowded; splitting it into batches is the next step.**
 - Low-confidence glow emitters (mushrooms) also light their pale cap spots.
 
 ## 4. Real Hermes (0.22.7, Windows), run by the user

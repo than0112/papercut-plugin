@@ -404,13 +404,18 @@ def _pink_analysis():
             "reconstruction": {"recommended": "2.5d", "notes": ""}, "confidence": {"overall": 0.5}, "needsReview": []}
 
 
-@pytest.mark.parametrize("flag", [False, True])
-def test_refinement_round_splits_mixed_regions(tmp_path, monkeypatch, flag):
+@pytest.mark.parametrize("mode", ["model_flags", "colour_check", "no_second_round"])
+def test_refinement_round_splits_mixed_regions(tmp_path, monkeypatch, mode):
+    """Mixed regions reach the second round when the model flags them, or when it does not but the
+    colour check against neighbouring layers catches them. Without a second round they stay wrong."""
     from papercraft_hermes.core import segment_backends
 
     path, gt = _same_colour_scene(tmp_path)
     monkeypatch.setattr(segment_backends, "marks_for", lambda n: 3)  # force coarse, mixed regions
-    oracle = Oracle(monkeypatch=monkeypatch, gt=gt, ids=["sky", "hills", "blossoms"], flag_uncertain=flag)
+    if mode == "no_second_round":
+        monkeypatch.setattr(segment_backends, "AUTO_REFINE_MAX", 0)
+    oracle = Oracle(monkeypatch=monkeypatch, gt=gt, ids=["sky", "hills", "blossoms"],
+                    flag_uncertain=mode == "model_flags")
     llm = FakeLlm([_pink_analysis(), oracle, oracle])
     ctx = FakeContext(config={"workspace_dir": str(tmp_path / "ws")}, llm=llm)
     plugin.register(ctx)
@@ -420,14 +425,35 @@ def test_refinement_round_splits_mixed_regions(tmp_path, monkeypatch, flag):
     owner = np.asarray(Image.open(tmp_path / "ws" / pid / "segmentation" / "owner.png")).astype(int)
     blossom_iou = _iou(owner == 2, gt == 2)
     purposes = [c["purpose"] for c in llm.calls]
-    if flag:
-        assert purposes.count("papercraft.segment.refine") == 1
-        assert res["data"]["labelling"]["refined"] >= 1
-        assert (tmp_path / "ws" / pid / "review" / "refine_marks.png").is_file()
-        assert blossom_iou > 0.9, blossom_iou
-    else:
+    labelling = res["data"]["labelling"]
+    if mode == "no_second_round":
         assert "papercraft.segment.refine" not in purposes
         assert blossom_iou < 0.6, "without a second round the mixed region stays wrong"
+        return
+    assert purposes.count("papercraft.segment.refine") == 1
+    assert labelling["refined"] >= 1
+    assert (tmp_path / "ws" / pid / "review" / "refine_marks.png").is_file()
+    assert blossom_iou > 0.9, blossom_iou
+    if mode == "colour_check":
+        assert labelling["autoFlagged"], "the plugin, not the model, sent the regions to the second round"
+        manifest = json.loads((tmp_path / "ws" / pid / "layers.json").read_text())
+        assert schema_errors("layers", manifest) == []
+
+
+def test_colour_check_ignores_pure_regions(fixture_dir):
+    """With perfect labels on the synthetic fixture (cast shadows, gradients), nothing is flagged."""
+    from papercraft_hermes.core import segment_backends
+
+    gt = _ground_truth(fixture_dir)
+    work, _ = seg.work_copy(seg.load_rgba(str(fixture_dir / "source.png")))
+    regions = seg.oversegment(work, max_marks=segment_backends.marks_for(len(LAYER_IDS)))
+    h, w = regions.labels.shape
+    gt_work = gt[(np.arange(h) * gt.shape[0] // h)][:, (np.arange(w) * gt.shape[1] // w)]
+    assignment = {}
+    for r in regions.marked:
+        values = gt_work[regions.labels == r]
+        assignment[r] = int(np.bincount(values[values >= 0], minlength=len(LAYER_IDS)).argmax())
+    assert seg.mixed_suspects(regions, assignment, seg.REFINE_MIN_AREA * regions.labels.size) == []
 
 
 def test_refinement_failure_keeps_first_round(tmp_path, monkeypatch):

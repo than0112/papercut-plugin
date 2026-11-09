@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.8.1.** All six tools work end to end, in Hermes and as a Claude Code plugin.
+> **Status: v0.9.0.** All six tools work end to end, in Hermes and as a Claude Code plugin.
 > Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
 > [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
 
@@ -377,6 +377,15 @@ The agent turns the request into JSON Patch operations, and `papercraft_update_s
    showing between blossoms) are split into smaller parts along the original
    fine segments. The model gets one more image with only those parts bright
    and numbered (`review/refine_marks.png`).
+   **Colour check:** the model does not always notice a mixed region, so the
+   plugin also checks every labelled region itself. It splits the region into
+   two colour groups. If one group matches an adjacent region of *another* layer
+   much better than anything of its own layer, the region joins the second round
+   (up to 3 extra regions; `labelling.autoFlagged` lists them). Lightness counts
+   for half, so a cast shadow (a darker shade of the same paper) is not mistaken
+   for another layer. With perfect labels on the synthetic fixture it flags
+   nothing; on the real village image it caught the blossom-and-sky region the
+   model had missed.
 3. **Full-resolution edges.** The map is upsampled and the pixels on layer
    boundaries are reassigned by local colour similarity. Isolated specks are
    removed.

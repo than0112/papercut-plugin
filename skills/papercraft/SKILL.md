@@ -24,7 +24,8 @@ model.** Two steps hand you an image and wait for your answer.
    - `assignments` must map **every** number to a layer id, for example `{"1": "sky", "2": "mountains", ...}`.
    - List each region that mixes layers in `uncertain`, for example sky showing between
      foreground blossoms. Those regions come back split into smaller parts. Label the parts and
-     submit again.
+     submit again. The plugin may add regions of its own to that second round when their colours
+     match neighbours of another layer, so a second round can come even if you flagged nothing.
    - Small numbers are easy to miss, so check the numbers along edges and in corners.
    - A soft dark band beside a paper edge is a cast shadow. It belongs to the paper it falls on.
 

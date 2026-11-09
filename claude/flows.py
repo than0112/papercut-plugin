@@ -244,7 +244,8 @@ def _run_segment(project: Project, state: dict) -> list[dict]:
         refine = need.purpose.endswith("refine")
         first = need.purpose.endswith("labels") and not answers
         if refine:
-            steps = ("Second round: the regions you marked uncertain were split into smaller parts. In the image below "
+            steps = ("Second round: the regions you marked uncertain, plus any whose colours match neighbours of a different "
+                     "layer, were split into smaller parts. In the image below "
                      "everything else is darkened. Label every bright numbered part and call papercraft_segment_submit "
                      f"again with project_id=\"{project.id}\".")
             images = [need.images[-1]]

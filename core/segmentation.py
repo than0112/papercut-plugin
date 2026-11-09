@@ -217,6 +217,89 @@ def oversegment(work_rgb: np.ndarray, *, max_marks: int = MAX_MARKS) -> Regions:
 REFINE_MAX_REGIONS = 6  # uncertain regions subdivided in the second labelling round
 REFINE_MIN_AREA = 0.005  # ... if they cover at least this fraction of the image
 REFINE_PARTS = 12  # target sub-regions per refined region
+# Mixed-region check after the first round: a region whose two colour groups look like neighbours
+# labelled with a different layer is sent to the second round even if the model did not flag it.
+MIX_MATCH_LAB = 15.0  # a colour group "looks like" a neighbour within this Lab distance ...
+MIX_GAIN_LAB = 8.0  # ... and at least this much closer than to any neighbour of the region's own layer
+MIX_MIN_SHARE = 0.15  # the foreign-looking group covers at least this share of the region
+MIX_L_WEIGHT = 0.5  # lightness counts less than hue: a cast shadow is a darker shade of the same paper
+
+
+def _two_colour_groups(regions: Regions, r: int) -> list[tuple[np.ndarray, float]] | None:
+    """Split region ``r`` into two colour groups of its base segments (area-weighted 2-means in Lab)."""
+    mask = regions.labels == r
+    ids, inv, counts = np.unique(regions.base[mask], return_inverse=True, return_counts=True)
+    if len(ids) < 2:
+        return None
+    means = np.zeros((len(ids), 3))
+    np.add.at(means, inv.ravel(), regions.lab[mask])
+    means /= counts[:, None]
+    weights = counts.astype(float)
+    centre = np.average(means, axis=0, weights=weights)
+    cov = ((means - centre).T * weights) @ (means - centre) / weights.sum()
+    projection = (means - centre) @ np.linalg.eigh(cov)[1][:, -1]
+    group = projection > np.average(projection, weights=weights)
+    for _ in range(10):
+        if group.all() or not group.any():
+            return None
+        m1, m0 = (np.average(means[g], axis=0, weights=weights[g]) for g in (group, ~group))
+        new = np.linalg.norm(means - m1, axis=1) < np.linalg.norm(means - m0, axis=1)
+        if (new == group).all():
+            break
+        group = new
+    if group.all() or not group.any():
+        return None
+    return [(np.average(means[g], axis=0, weights=weights[g]), float(weights[g].sum())) for g in (~group, group)]
+
+
+def mixed_suspects(regions: Regions, assignment: dict[int, int], min_px: float) -> list[tuple[float, int]]:
+    """Labelled regions that probably mix layers, as (score, region id), most suspicious first.
+
+    Each region is split into two colour groups. If one group is clearly closer in colour to an adjacent
+    region labelled with another layer than to any adjacent region of its own layer, the region probably
+    holds pieces of both layers (sky showing between blossoms, a trunk behind flowers).
+    """
+    n = int(regions.labels.max()) + 1
+    flat = regions.labels.ravel()
+    count = np.maximum(np.bincount(flat, minlength=n), 1).astype(float)
+    mean = np.stack([np.bincount(flat, regions.lab[..., i].ravel(), minlength=n) for i in range(3)], 1) / count[:, None]
+    # Mean colour of each layer over all its labelled regions: the reference when a region has no
+    # adjacent region of its own layer.
+    layer_sum: dict[int, np.ndarray] = {}
+    layer_px: dict[int, float] = {}
+    for r, k in assignment.items():
+        layer_sum[k] = layer_sum.get(k, 0) + mean[r] * count[r]
+        layer_px[k] = layer_px.get(k, 0) + count[r]
+    weight = np.array([MIX_L_WEIGHT, 1.0, 1.0])
+    out = []
+    for r, own in assignment.items():
+        if regions.areas[r] < min_px or regions.base is None:
+            continue
+        neighbours = [nb for nb in regions.adjacency.get(r, {}) if nb in assignment]
+        if not neighbours:
+            continue
+        groups = _two_colour_groups(regions, r)
+        if not groups:
+            continue
+        total = groups[0][1] + groups[1][1]
+        score = 0.0
+        for colour, area in groups:
+            nearest: dict[int, float] = {}
+            for nb in neighbours:
+                d = float(np.linalg.norm((mean[nb] - colour) * weight))
+                nearest[assignment[nb]] = min(nearest.get(assignment[nb], np.inf), d)
+            rest = layer_px[own] - count[r]
+            if rest > 0:  # the rest of the region's own layer, anywhere in the image
+                own_mean = (layer_sum[own] - mean[r] * count[r]) / rest
+                nearest[own] = min(nearest.get(own, np.inf), float(np.linalg.norm((own_mean - colour) * weight)))
+            layer = min(nearest, key=nearest.get)
+            gain = nearest.get(own, np.inf) - nearest[layer]
+            share = area / total
+            if layer != own and nearest[layer] < MIX_MATCH_LAB and gain > MIX_GAIN_LAB and share >= MIX_MIN_SHARE:
+                score = max(score, share * min(gain, 40.0) * float(regions.areas[r]) / regions.labels.size)
+        if score > 0:
+            out.append((score, int(r)))
+    return sorted(out, reverse=True)
 
 
 def subdivide(regions: Regions, targets: list[int]) -> tuple[Regions, dict[int, int], list[int]]:

@@ -257,7 +257,8 @@ def _write_layers(project: Project, source: str, layers: list[dict], result: Bac
     if low:
         warnings.append(f"low segmentation confidence for {', '.join(low)}: check review/overlay.png")
     labelling = {k: v for k, v in result.meta.items() if k in
-                 ("provider", "model", "attempts", "regions", "marked", "mergeThreshold", "service", "refined")}
+                 ("provider", "model", "attempts", "regions", "marked", "mergeThreshold", "service", "refined",
+                  "autoFlagged")}
     if reused:
         labelling["reused"] = True
     manifest = {
