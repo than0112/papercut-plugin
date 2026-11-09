@@ -14,3 +14,7 @@ viewer/dist/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Claude Code plugin (local runs)
+/.papercraft-data/
+papercraft-projects/

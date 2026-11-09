@@ -8,9 +8,130 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.7.0: all six tools work end to end.** Submission material:
-> [docs/SUBMISSION.md](docs/SUBMISSION.md), [docs/TEST_REPORT.md](docs/TEST_REPORT.md),
-> [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
+> **Status: v0.8.0.** All six tools work end to end, in Hermes and as a Claude Code plugin.
+> Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
+> [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
+
+## Quick start
+
+The same repository installs in two hosts. Pick one.
+
+### Requirements
+
+| What | Version | Needed for |
+|---|---|---|
+| Python | 3.11 or newer | Both hosts |
+| Node.js | 20.19 or newer (includes npm) | Only to preview a scene or build the exported site |
+| Hermes Agent | 0.22 or newer | Option A |
+| Claude Code | a current release | Option B |
+
+Check them with `python --version` (`python3 --version` on macOS and Linux) and `node --version`.
+
+### Option A: Hermes Agent
+
+1. Install and enable the plugin. Hermes clones it into its plugins folder
+   (`%LOCALAPPDATA%\hermes\plugins` on Windows, `~/.hermes/plugins` on macOS and Linux):
+
+   ```bash
+   hermes plugins install than0112/papercut-plugin --enable
+   ```
+
+2. When Hermes asks to install the Python dependencies (Pillow, numpy, jsonschema, scipy,
+   scikit-image), accept.
+3. **Restart Hermes** (and Hermes Desktop) so the plugin loads.
+4. Check that it is listed:
+
+   ```bash
+   hermes plugins list
+   ```
+
+5. Make sure Hermes has a **vision-capable model** configured. The plugin sends the image
+   only to that model, through Hermes.
+6. Attach a paper-cut image in Hermes and say, for example:
+
+   > 用 papercraft_analyze 分析這張圖，然後 papercraft_segment 分層、papercraft_build_scene 建場景、papercraft_generate_plan 產生企劃書。
+
+To update later, run the following, then restart Hermes again:
+
+```bash
+hermes plugins update papercraft-3d
+```
+
+Every tool result carries `pluginVersion`, so you can confirm which version is actually running.
+The full test procedure is in [docs/HERMES_TEST_PLAN.md](docs/HERMES_TEST_PLAN.md).
+
+### Option B: Claude Code
+
+In Claude Code, the vision model is Claude itself. No API key is needed.
+
+1. Add the marketplace (this repository) and install the plugin, in a terminal:
+
+   ```bash
+   claude plugin marketplace add than0112/papercut-plugin
+   ```
+
+   ```bash
+   claude plugin install papercraft-3d@papercraft
+   ```
+
+   Or inside Claude Code: `/plugin marketplace add than0112/papercut-plugin`, then
+   `/plugin install papercraft-3d@papercraft`.
+2. Start a new Claude Code session so the plugin loads.
+3. **Windows only:** if `python3` does not start Python on your machine, set the Python command
+   to `python` or `py`:
+
+   ```
+   /plugin configure papercraft-3d@papercraft
+   ```
+
+   The same command sets `workspace_dir`, the folder where projects are written. By default,
+   projects go to `papercraft-projects/` in the folder where you started Claude Code.
+4. Ask, for example: "用 PaperCraft 3D 把 ./my-papercut.png 做成 Three.js 紙雕場景".
+5. On first use, Claude reports that the imaging libraries are missing and shows two commands
+   that install them into the plugin's own data folder (a virtualenv, not your system Python).
+   Allow them. No restart is needed afterwards.
+
+To update later:
+
+```bash
+claude plugin marketplace update papercraft
+```
+
+```bash
+claude plugin update papercraft-3d@papercraft
+```
+
+### Preview the scene and build the website
+
+Both hosts finish the build step by returning the exact preview command for your project. In short:
+
+1. Once, in the plugin's `viewer` folder: `npm install`.
+2. Start the viewer with `PAPERCRAFT_PROJECT` set to the project folder
+   (PowerShell: `$env:PAPERCRAFT_PROJECT="<project_dir>"; npm run dev`,
+   bash: `PAPERCRAFT_PROJECT="<project_dir>" npm run dev`).
+3. Open `http://localhost:5173/?scene=project/scene.json`. The viewer reloads by itself after
+   every edit.
+4. After `papercraft_export_project`, build the standalone site in the export folder:
+
+   ```bash
+   npm ci
+   ```
+
+   ```bash
+   npm run build
+   ```
+
+   Upload `dist/` to any static host.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Hermes keeps running an old version (`pluginVersion` is old) | `hermes plugins remove papercraft-3d`, then install again and restart Hermes |
+| Hermes: `model_unavailable` | Configure a vision-capable model in Hermes |
+| Claude Code: the papercraft tools do not appear | Run `/mcp` to see the server's state. On Windows, set the Python command (step 3 of Option B) |
+| Claude Code: "needs its imaging libraries" | Let Claude run the two setup commands it shows, then call the tool again |
+| A part of the picture is in the wrong layer | Look at `review/overlay.png`, paint a mask, and correct it with `manual_masks` (Hermes) or `papercraft_segment_correct` (Claude Code) |
 
 ## How it works
 
@@ -41,7 +162,7 @@ file through Ajv). The design spec is rendered from it.
 | `papercraft_analyze` | Validate the image, create a project, and produce structured `analysis.json` (layers, occlusion, palette, light, camera, confidence, review items) | ✅ phase 2 |
 | `papercraft_segment` | Transparent full-size layer PNGs + masks + `layers.json`. Fills hidden areas behind nearer layers. Supports manual mask corrections and review images. Fails rather than fakes, with an opt-in labelled *preview* mode | ✅ phase 3 |
 | `papercraft_build_scene` | Schema-valid `scene.json`: layer depths, camera and parallax limits derived from the fill margin, calibrated light from the analysis plus day/night presets, glow maps for windows, lanterns and the sun | ✅ phase 4 |
-| `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–F) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
+| `papercraft_generate_plan` | `DESIGN_SPEC.md` (sections A–G) rendered from `scene.json` and re-checked against it. Records the scene fingerprint and keeps user notes on regeneration | ✅ phase 5 |
 | `papercraft_update_scene` | Validated, atomic Scene Patch from a request in plain language. Protected paths, layers addressable by id, `$preset`, safety-bound rebalancing, history with `revert_to`, `dry_run`, spec and change log updated, live viewer reload | ✅ phase 6 |
 | `papercraft_export_project` | Standalone Vite + React + Three.js project (`npm ci && npm run build`), scene and every asset, spec, logs with absolute paths removed. The plugin never runs npm | ✅ phase 7 |
 
@@ -54,24 +175,11 @@ codes include `image_format`, `image_too_large`, `model_unavailable`,
 
 ## Claude Code plugin
 
-The same repository is also a **Claude Code plugin**. In Claude Code the vision model is
-Claude itself: two of the steps hand Claude the image and wait for its answer.
-
-```bash
-claude plugin marketplace add than0112/papercut-plugin
-```
-
-```bash
-claude plugin install papercraft-3d@papercraft
-```
-
-Or, inside Claude Code: `/plugin install papercraft-3d --marketplace than0112/papercut-plugin`.
-
-Then ask, for example: "用 PaperCraft 3D 把 ./my-papercut.png 做成 Three.js 紙雕場景". On first
-use, `papercraft_status` returns two commands that install the imaging libraries into the
-plugin's data folder. Claude runs them with your permission, and no restart is needed. The MCP
-server (`claude/server.py`) uses only the Python standard library. Under `/config` you can set
-the Python command (`python` or `py` on Windows) and the workspace folder.
+In Claude Code, two of the steps hand Claude the image and wait for its answer. The answer then
+goes through the same validation, repair and second labelling round as in Hermes. The MCP server
+(`claude/server.py`) uses only the Python standard library, so it always starts. The imaging
+libraries live in a virtualenv in the plugin's data folder. For installation, see
+[Option B](#option-b-claude-code).
 
 | Claude Code tool | What it does |
 |---|---|
@@ -81,30 +189,7 @@ the Python command (`python` or `py` on Windows) and the workspace folder.
 | `papercraft_segment_correct` | Manual mask corrections |
 | `papercraft_build_scene`, `_generate_plan`, `_update_scene`, `_export_project` | The same as the Hermes tools |
 
-## Install in Hermes (development)
-
-Requirements: Hermes Agent `>=0.22`, Python ≥ 3.11, and Node ≥ 20.19 (viewer only).
-
-Let Hermes clone it into its own plugins folder. That folder is
-`%LOCALAPPDATA%\hermes\plugins` on Windows and `~/.hermes/plugins` on Linux
-and macOS.
-
-```bash
-hermes plugins install than0112/papercut-plugin --enable
-```
-
-To update later, run the following, then **restart Hermes** (and Hermes Desktop) so the new code loads:
-
-```bash
-hermes plugins update papercraft-3d
-```
-
-```bash
-hermes plugins list
-```
-
-Every tool result carries `pluginVersion`, so you can confirm which version is
-actually running.
+## Hermes details
 
 Python dependencies (`Pillow`, `numpy`, `jsonschema`, `scipy`, `scikit-image`)
 are declared in `pyproject.toml` with bounded ranges compatible with Hermes's
@@ -152,25 +237,36 @@ Lasting changes go through `papercraft_update_scene`.
 
 ## Tests
 
+For development only; users do not need this. From the repository root:
+
 ```bash
 python -m venv .venv
 ```
 
 ```bash
-.venv/bin/pip install "Pillow>=10,<14" "numpy>=1.26,<3" "jsonschema>=4.18,<5" "pytest>=8,<10" "PyYAML>=6,<7"
+.venv/bin/pip install "Pillow>=10.1,<14" "numpy>=1.26,<3" "jsonschema>=4.18,<5" "scipy>=1.11,<2" "scikit-image>=0.24,<0.28" "pytest>=8,<10" "PyYAML>=6,<7"
 ```
 
 ```bash
 .venv/bin/python -m pytest tests
 ```
 
-The tests cover the following:
+On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\python`. The suite (150 tests, about
+3 minutes) covers the following:
 
-- Manifest and registration parity, mirroring `hermes plugins validate`'s "declared tools" check.
-- The handler contract: handlers never raise and always return JSON strings.
-- Path confinement, including symlink escapes.
-- Image validation: format spoofing, truncation, and size limits.
-- The scene schema, including the path-traversal and URL asset rules.
+- **Plugin contract.** Manifest and registration parity, mirroring `hermes plugins validate`.
+  Handlers never raise and always return JSON strings. The catalog draft and the Claude Code
+  manifest match the plugin.
+- **Security.** Path confinement, including symlink escapes. Image validation: format spoofing,
+  truncation, and size limits. Asset paths in the scene schema: no traversal, no URLs.
+- **Each stage, end to end.** A fake vision model replays recorded and scripted replies, and an
+  oracle labeller reads the synthetic fixture's ground truth. This covers segmentation accuracy
+  and IoU, scene limits recomputed from `scene.json`, the spec agreeing with the scene, Scene Patch
+  rules and history, and an export free of absolute paths.
+- **Claude Code server.** The MCP handshake, the setup message when libraries are missing, and the
+  two-phase begin/submit flow.
+
+The viewer is checked with `cd viewer && npm run build` (TypeScript and Vite).
 
 ## How analysis works
 
@@ -329,11 +425,31 @@ the same planes.
 4. ✅ Three.js scene builder (`scene.json`), frame clipping, edge extension, glow maps. `shape`/`extrude` geometry is still to do
 5. ✅ Design spec generator (zh-TW / en, verified against scene.json)
 6. ✅ Natural-language Scene Patch (`papercraft_update_scene`), with a live-reloading viewer
-7. ✅ Export, test report, demo script, catalog entry draft. Still to do: real-Hermes run of every stage, demo video, catalog PR
+7. ✅ Export, test report, demo script, catalog entry draft
+8. ✅ Claude Code plugin (Claude as the vision model), tested end to end on a real image
+
+Still to do: a real-Hermes run of every stage, the demo video, and the catalog PR.
 
 ## 中文摘要
 
-PaperCraft 3D 是 Hermes Agent 插件：把 AI 紙雕圖轉成可互動的 Three.js 2.5D 場景，並產生與 `scene.json` 完全一致的 `DESIGN_SPEC.md`，可用自然語言修改場景。目前為第一階段骨架；尚未實作的步驟會明確回傳 `not_implemented`，不會假裝成功。
+PaperCraft 3D 能把一張 AI 紙雕圖做成可以互動的 Three.js 2.5D 網頁場景，可以裝在 Hermes Agent 或 Claude Code 裡用。它會產生以下成果：
+
+- 每一層的透明圖檔
+- `scene.json` 場景檔
+- 企劃書 `DESIGN_SPEC.md`，內容和場景完全一致
+- 可以獨立建置的網頁專案
+
+場景做好後，也可以直接用一句話修改，例如「改成夜晚、藍色月光」。任何步驟失敗都會明確回報錯誤，不會假裝成功。
+
+**安裝（擇一）：**
+
+- **Hermes**：執行 `hermes plugins install than0112/papercut-plugin --enable`，同意安裝 Python 套件，然後重新啟動 Hermes。Hermes 需要先設定好支援圖片的模型。
+- **Claude Code**：依序執行 `claude plugin marketplace add than0112/papercut-plugin` 和 `claude plugin install papercraft-3d@papercraft`，然後開一個新的對話。第一次使用時，Claude 會請你同意安裝影像套件。Windows 如果無法用 `python3` 啟動 Python，請用 `/plugin configure papercraft-3d@papercraft` 把 Python 指令改成 `python` 或 `py`。
+
+**預覽與建置：**
+
+- 預覽場景需要 Node.js 20.19 以上。先在外掛的 `viewer` 資料夾執行一次 `npm install`，再照建場景步驟回傳的指令啟動預覽。
+- 匯出的網頁專案，在匯出資料夾執行 `npm ci` 和 `npm run build` 即可。
 
 ## License
 
