@@ -32,19 +32,41 @@ answer is checked before it is used. You end up with code and assets you own.
 
 ## Showcase
 
-<!-- Real end-to-end captures only. File names and how to capture them: docs/media/README.md -->
+<!-- Real end-to-end captures only. Provenance and how to capture: docs/media/README.md -->
 
-| Original AI artwork | Semantic layer map | Interactive Three.js preview |
+**Original AI artwork → semantic layer map → interactive Three.js preview**
+
+| Original AI artwork | Semantic layer map | Interactive Three.js preview (tilted) |
 |:---:|:---:|:---:|
-| *Capture pending:* `docs/media/01-original.webp` | *Capture pending:* `docs/media/02-layer-map.png` | *Capture pending:* `docs/media/03-preview.png` |
+| <img src="docs/media/01-original.webp" alt="AI-generated papercut of a lighthouse harbour at sunset" width="300"> | <img src="docs/media/02-layer-map.webp" alt="The seven layers as solid colours: sky, mountains, sea, harbour village, lighthouse cliff, tree, foreground" width="300"> | <img src="docs/media/03-preview.webp" alt="The layered scene in the Three.js viewer, tilted so nearer layers shift against farther ones" width="300"> |
 
-More captures are planned: the **exploded layer view**, **day vs night lighting**, and **natural-language
-scene editing** (a chat request, then the viewer reloading to the new revision). The
-[shot list](docs/media/README.md) describes each one.
+| Exploded layer view | Day vs night lighting |
+|:---:|:---:|
+| <img src="docs/media/04-exploded.webp" alt="Exploded view with the layers pulled apart in depth" width="440"> | <img src="docs/media/05-day.webp" alt="Day lighting" width="215"> <img src="docs/media/06-night.webp" alt="Night lighting with the lighthouse lamp and the sun glowing" width="215"> |
 
-This repository does not show the synthetic test fixture as a result. That fixture is drawn by a
-script to test the pipeline against known layers; it is not output of the AI workflow. The showcase
-will only contain real end-to-end runs, labelled with the host and plugin version that produced them.
+**Natural-language scene editing.** The request was 「改成夜間，使用冷色月光，讓燈籠和窗戶亮起來」("make it
+night, use cold moonlight, and light up the lanterns and windows"). Claude turned it into a validated scene
+patch, then raised the glow in a second patch.
+
+| Before (revision 0) | After (revision 2) |
+|:---:|:---:|
+| <img src="docs/media/07-edit-before.webp" alt="Japanese village papercut scene in daylight" width="440"> | <img src="docs/media/07-edit-after.webp" alt="The same scene at night with cold moonlight and glowing lanterns and windows" width="440"> |
+
+**Every layer is a real cut-out.** These are the seven transparent PNGs, farthest first. Stacked again,
+they reproduce the original exactly.
+
+<img src="docs/media/08-layers.webp" alt="The seven transparent layer PNGs on a checkerboard, from sky to foreground">
+
+<sub>**Provenance.** All captures come from real runs of the **Claude Code host**, with Claude as the
+vision model. They are not from Hermes, and they are not the synthetic test fixture.
+
+- **Lighthouse:** analysed and segmented with plugin 0.8.0. The scene was rebuilt from that
+  segmentation with 0.9.3, without a model call. The layer map shows Claude's labels as they are,
+  including a few small mistakes.
+- **Village:** the edit is Claude's recorded patch, replayed with `papercraft_update_scene` on a scene
+  rebuilt with 0.9.3.
+
+Details: [docs/media/README.md](docs/media/README.md).</sub>
 
 ## Why PaperCraft 3D?
 
@@ -243,7 +265,7 @@ algorithms, error handling, colour checks, lighting model, region merging and se
 
 ## Current Status & Limitations
 
-**Version 0.9.2.** All six tools are implemented. **176 automated tests** pass; they use a fake vision
+**Version 0.9.3.** All six tools are implemented. **177 automated tests** pass; they use a fake vision
 model and an oracle labeller, plus replies recorded from real runs. The per-file breakdown is in
 [TEST_REPORT.md](docs/TEST_REPORT.md).
 
@@ -269,10 +291,13 @@ So not all six tools have been accepted in a real Hermes environment yet.
 - Claude reported its own layer mistakes. In one run it corrected a layer with a painted mask.
 - The analyses and labels from these runs are recorded as regression tests.
 
-**Changes since the Hermes run (0.9.2, covered by automated tests and an offline evaluation):**
+**Changes since the Hermes run (0.9.2–0.9.3, covered by automated tests and an offline evaluation):**
 
-- Merged regions whose pieces are clearly different colours are now split before numbering. This is
-  the cause of the sailboat error.
+- Merged regions whose pieces are clearly different colours are now split before numbering. This was
+  the cause of the sailboat error (0.9.2).
+- Glow now falls off from an emitter's brightest pixels. Before, paper of the emitter's colour inside its
+  box glowed evenly, so the sun's rays showed a rectangular glow at night. Lanterns and windows keep
+  their full glow (0.9.3).
 - On the three real images, the share of numbered-region pixels that belong to another layer fell from
   0.019 to 0.015 on the lighthouse and stayed level on the village and the forest.
 
