@@ -247,6 +247,9 @@ def _write_layers(project: Project, source: str, layers: list[dict], result: Bac
     review = {"overlay": "review/overlay.png"}
     project.path("review").mkdir(exist_ok=True)
     _review_copy(seg.overlay(rgba[..., :3], owner, [l["id"] for l in kept])).save(project.path(review["overlay"]))
+    review["layer_map"] = "review/layer_map.png"
+    _review_copy(seg.overlay(rgba[..., :3], owner, [l["id"] for l in kept], solid=True)).save(
+        project.path(review["layer_map"]))
     for name, img in result.review_images.items():
         review[name] = f"review/{name}.png"
         img.save(project.path(review[name]))
@@ -258,7 +261,7 @@ def _write_layers(project: Project, source: str, layers: list[dict], result: Bac
         warnings.append(f"low segmentation confidence for {', '.join(low)}: check review/overlay.png")
     labelling = {k: v for k, v in result.meta.items() if k in
                  ("provider", "model", "attempts", "regions", "marked", "mergeThreshold", "service", "refined",
-                  "autoFlagged")}
+                  "refineBatches", "autoFlagged")}
     if reused:
         labelling["reused"] = True
     manifest = {

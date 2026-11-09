@@ -238,6 +238,11 @@
         "service": {
           "type": "string"
         },
+        "refineBatches": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Second-round calls: the split regions are labelled in batches of at most 36 numbered parts."
+        },
         "autoFlagged": {
           "type": "array",
           "items": {"type": "integer", "minimum": 1},

@@ -49,7 +49,8 @@ same validation, repair and second labelling round. It is one pipeline with two 
 - **Network.**
   - The image goes to the vision model the user already configured in Hermes,
     through `ctx.llm`, so Hermes owns the credentials. A full run makes one
-    analysis call (plus one repair if needed) and one or two labelling calls.
+    analysis call (plus one repair if needed), one labelling call (plus one repair if needed), and,
+    when regions mix layers, up to four second-round calls of at most 36 numbered parts each.
   - `segmentation_backend: http` contacts only the URL the user sets: https,
     or http on localhost.
   - The plugin makes no other network calls and has no telemetry.

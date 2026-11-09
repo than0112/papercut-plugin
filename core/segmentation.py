@@ -217,6 +217,29 @@ def oversegment(work_rgb: np.ndarray, *, max_marks: int = MAX_MARKS) -> Regions:
 REFINE_MAX_REGIONS = 6  # uncertain regions subdivided in the second labelling round
 REFINE_MIN_AREA = 0.005  # ... if they cover at least this fraction of the image
 REFINE_PARTS = 12  # target sub-regions per refined region
+REFINE_BATCH_PARTS = 36  # numbered parts per second-round image; more get hard to read and to find
+
+
+def refine_batches(parent: dict[int, int], parts: list[int], targets: list[int],
+                   limit: int = REFINE_BATCH_PARTS) -> list[list[int]]:
+    """Group the second-round parts into batches of at most ``limit``, keeping each region's parts together.
+
+    Targets keep their priority order (model-flagged first, larger first). A region with more parts than
+    the limit gets a batch of its own.
+    """
+    by_target: dict[int, list[int]] = {t: [] for t in targets}
+    for part in parts:
+        by_target.setdefault(parent[part], []).append(part)
+    batches: list[list[int]] = []
+    for target in by_target:
+        group = by_target[target]
+        if not group:
+            continue
+        if batches and len(batches[-1]) + len(group) <= limit:
+            batches[-1].extend(group)
+        else:
+            batches.append(list(group))
+    return batches
 # Mixed-region check after the first round: a region whose two colour groups look like neighbours
 # labelled with a different layer is sent to the second round even if the model did not flag it.
 MIX_MATCH_LAB = 15.0  # a colour group "looks like" a neighbour within this Lab distance ...
@@ -577,13 +600,17 @@ REVIEW_COLOURS = np.array([
     [158, 157, 36], [92, 107, 192]], dtype=np.float32)
 
 
-def overlay(full_rgb: np.ndarray, owner: np.ndarray, names: list[str]) -> Image.Image:
-    """Colour-coded layer ownership over a dimmed source, with a legend."""
-    base = full_rgb.astype(np.float32) * 0.45
+def overlay(full_rgb: np.ndarray, owner: np.ndarray, names: list[str], *, solid: bool = False) -> Image.Image:
+    """Colour-coded layer ownership over a dimmed source, with a legend.
+
+    ``solid`` paints the layer colours without the art: tinted art can shift a colour (blue over a pink
+    sky reads as purple), so the solid map is the unambiguous one for checking which layer owns what.
+    """
+    base = full_rgb.astype(np.float32) * (0.0 if solid else 0.45)
     tint = np.zeros_like(base)
     for k in range(len(names)):
         tint[owner == k] = REVIEW_COLOURS[k % len(REVIEW_COLOURS)]
-    img = base + tint * 0.55
+    img = base + tint * (1.0 if solid else 0.55)
     edges = find_boundaries(owner, mode="inner")
     img[edges] = 255
     out = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))

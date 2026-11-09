@@ -85,11 +85,12 @@ Return one JSON object:
 It must contain all numbers from 1 to {len(numbers)}."""
 
 
-def refine_instructions(layers: list[dict[str, Any]], n_parts: int) -> str:
+def refine_instructions(layers: list[dict[str, Any]], n_parts: int, *, batch: int = 1, batches: int = 1) -> str:
     plan = "\n".join(f'- "{layer["id"]}" (order {layer["order"]}): {layer["name"]}. {layer["description"]}'
                      for layer in layers)
     ids = ", ".join(f'"{layer["id"]}"' for layer in layers)
-    return f"""Second pass of the same labelling task. Some regions seem to mix several depth layers
+    part = f" (batch {batch} of {batches}; each batch shows different regions)" if batches > 1 else ""
+    return f"""Second pass of the same labelling task{part}. Some regions seem to mix several depth layers
 (you marked them uncertain, or their colours match neighbours of different layers), so they were split
 into smaller parts. Judge each part afresh from the original image. Image 1 is the original. In image 2 everything else is darkened; only
 the parts to decide are bright, outlined and numbered 1 to {n_parts}.
@@ -197,33 +198,49 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
     if targets:
         refined, parent, parts = seg.subdivide(regions, targets)
         if len(parts) >= 2:
-            refine_img = seg.render_refine_marks(work, refined, parts)
-            try:
-                second = provider.structured([(original, mime), (seg.png_bytes(refine_img), "image/png")],
-                                             instructions=refine_instructions(layers, len(parts)), timeout=timeout,
-                                             purpose="papercraft.segment.refine", schema_name="papercraft_region_labels",
-                                             max_tokens=3000)
-                part_labels, part_uncertain, part_problems = parse_labels(second.data, len(parts), layer_ids)
-                if log:
-                    log(attempt="refine", provider=second.provider, model=second.model,
-                        problems=part_problems[:10], raw=second.raw_text)
-            except PaperCraftError as exc:
-                part_labels, part_uncertain, part_problems = {}, [], [str(exc.message)]
-                warnings.append(f"refinement round failed ({exc.code.value}); first-round labels kept")
+            batches = seg.refine_batches(parent, parts, targets)
+            part_labels: dict[int, int] = {}
+            part_uncertain: set[int] = set()
+            part_problems: list[str] = []
+            for b, batch in enumerate(batches, start=1):
+                refine_img = seg.render_refine_marks(work, refined, batch)
+                review_images["refine_marks" if b == 1 else f"refine_marks_{b}"] = refine_img
+                tag = "" if len(batches) == 1 else f"batch {b}: "
+                try:
+                    second = provider.structured(
+                        [(original, mime), (seg.png_bytes(refine_img), "image/png")],
+                        instructions=refine_instructions(layers, len(batch), batch=b, batches=len(batches)),
+                        timeout=timeout, purpose="papercraft.segment.refine", schema_name="papercraft_region_labels",
+                        max_tokens=3000)
+                    labels_b, uncertain_b, problems_b = parse_labels(second.data, len(batch), layer_ids)
+                    if log:
+                        log(attempt="refine" if b == 1 else f"refine{b}", provider=second.provider,
+                            model=second.model, problems=problems_b[:10], raw=second.raw_text)
+                except PaperCraftError as exc:
+                    labels_b, uncertain_b, problems_b = {}, [], [str(exc.message)]
+                    where = "" if len(batches) == 1 else f" for batch {b} of {len(batches)}"
+                    warnings.append(f"refinement round failed{where} ({exc.code.value}); "
+                                    "first-round labels kept for its regions")
+                for i, part in enumerate(batch, start=1):
+                    if i in labels_b:
+                        part_labels[part] = labels_b[i]
+                    if i in uncertain_b or i not in labels_b:
+                        part_uncertain.add(part)
+                part_problems += [tag + p for p in problems_b]
             for target in targets:
                 assignment.pop(target, None)
                 uncertain_regions.discard(target)
-            for i, part in enumerate(parts, start=1):
+            for part in parts:
                 fallback = by_number_for(number_to_region, by_number, parent[part])
-                if i in part_labels:
-                    assignment[part] = part_labels[i]
+                if part in part_labels:
+                    assignment[part] = part_labels[part]
                 elif fallback is not None:
                     assignment[part] = fallback
-                if i in part_uncertain or i not in part_labels:
+                if part in part_uncertain:
                     uncertain_regions.add(part)
             regions = refined
-            review_images["refine_marks"] = refine_img
-            refine_info = {"regions": len(targets), "parts": len(parts), "labelled": len(part_labels),
+            refine_info = {"regions": len(targets), "parts": len(parts), "batches": len(batches),
+                           "labelled": len(part_labels),
                            "autoFlagged": sorted(regions_numbers[r] for r in auto),
                            "problems": part_problems[:10]}
 
@@ -256,7 +273,8 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
         owner=owner.astype(np.int16), confidence=confidence, method="builtin:felzenszwalb+set-of-mark",
         meta={"provider": result.provider, "model": result.model, "attempts": attempt,
               "regions": record["regions"], "marked": n_marks, "mergeThreshold": regions.merge_threshold,
-              "refined": refine_info.get("regions", 0), "autoFlagged": refine_info.get("autoFlagged", [])},
+              "refined": refine_info.get("regions", 0), "refineBatches": refine_info.get("batches", 0),
+              "autoFlagged": refine_info.get("autoFlagged", [])},
         review_images=review_images, region_record=record, warnings=warnings,
     )
 

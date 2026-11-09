@@ -60,7 +60,8 @@ class Oracle:
         self.drop_fraction = drop_fraction
         self.skip_layer = skip_layer
         self.flag_uncertain = flag_uncertain
-        real, real_sub = seg.oversegment, seg.subdivide
+        self.batch = None
+        real, real_sub, real_render = seg.oversegment, seg.subdivide, seg.render_refine_marks
 
         def spy(work_rgb, **kw):
             self.regions = real(work_rgb, **kw)
@@ -70,8 +71,13 @@ class Oracle:
             self.refined = real_sub(regions, targets)
             return self.refined
 
+        def spy_render(work_rgb, regions, parts):
+            self.batch = list(parts)  # the parts numbered 1..n on the image being sent
+            return real_render(work_rgb, regions, parts)
+
         monkeypatch.setattr(seg, "oversegment", spy)
         monkeypatch.setattr(seg, "subdivide", spy_sub)
+        monkeypatch.setattr(seg, "render_refine_marks", spy_render)
 
     def _gt_work(self, labels):
         h, w = labels.shape  # work resolution: sample the ground truth there
@@ -86,10 +92,10 @@ class Oracle:
         assert [b["type"] for b in llm_call["input"]] == ["image", "image"], "original + marks image"
         assert llm_call["provider"] is None and llm_call["model"] is None
         if llm_call["purpose"] == "papercraft.segment.refine":
-            refined, _, parts = self.refined
+            refined = self.refined[0]
             gt_work = self._gt_work(refined.labels)
             answer = {str(i): self.ids[self._majority(gt_work, refined.labels == part)[0]]
-                      for i, part in enumerate(parts, start=1)}
+                      for i, part in enumerate(self.batch, start=1)}
             return {"assignments": answer, "uncertain": []}
         r = self.regions
         gt_work = self._gt_work(r.labels)
@@ -163,7 +169,7 @@ def test_segment_end_to_end(tmp_path, fixture_dir, monkeypatch):
     assert all(f > 0 for f in fractions[:-1]) and fractions[-1] == 0, fractions
     assert all(l["provenance"]["source"] == "auto" for l in manifest["layers"])
 
-    for rel in ("review/overlay.png", "review/marks.png", "segmentation/regions.json", "logs/segment_labels_1.txt"):
+    for rel in ("review/overlay.png", "review/layer_map.png", "review/marks.png", "segmentation/regions.json", "logs/segment_labels_1.txt"):
         assert (pdir / rel).is_file(), rel
     assert manifest["labelling"]["model"] == "vision-test" and manifest["fill"]["marginPx"] == 24
     assert hashlib.sha256((pdir / "source" / "source.png").read_bytes()).hexdigest() == source_sha
@@ -430,7 +436,7 @@ def test_refinement_round_splits_mixed_regions(tmp_path, monkeypatch, mode):
         assert "papercraft.segment.refine" not in purposes
         assert blossom_iou < 0.6, "without a second round the mixed region stays wrong"
         return
-    assert purposes.count("papercraft.segment.refine") == 1
+    assert purposes.count("papercraft.segment.refine") == labelling["refineBatches"] >= 1
     assert labelling["refined"] >= 1
     assert (tmp_path / "ws" / pid / "review" / "refine_marks.png").is_file()
     assert blossom_iou > 0.9, blossom_iou
@@ -469,3 +475,46 @@ def test_refinement_failure_keeps_first_round(tmp_path, monkeypatch):
     res = call(ctx, "papercraft_segment", {"project_id": pid})
     assert res["ok"], res
     assert any("refinement round failed" in w for w in res["warnings"])
+
+
+def test_refine_batches_keep_regions_together():
+    parent = {p: p // 100 for p in [101, 102, 103, 201, 202, 301, 302, 303, 304, 401]}
+    parts = sorted(parent)
+    batches = seg.refine_batches(parent, parts, targets=[1, 2, 3, 4], limit=5)
+    assert batches == [[101, 102, 103, 201, 202], [301, 302, 303, 304, 401]]
+    assert seg.refine_batches(parent, parts, targets=[3, 1, 2, 4], limit=4) == [
+        [301, 302, 303, 304], [101, 102, 103], [201, 202, 401]], "priority order kept, oversized batches avoided"
+    assert seg.refine_batches(parent, parts, targets=[1, 2, 3, 4], limit=2)[0] == [101, 102, 103], \
+        "a region larger than the limit gets a batch of its own"
+
+
+@pytest.mark.parametrize("fail_second", [False, True])
+def test_second_round_in_batches(tmp_path, monkeypatch, fail_second):
+    """Many mixed regions: the second round is sent as several smaller images, each labelled on its own."""
+    from papercraft_hermes.core import segment_backends
+
+    path, gt = _same_colour_scene(tmp_path)
+    monkeypatch.setattr(segment_backends, "marks_for", lambda n: 3)
+    monkeypatch.setattr(seg, "REFINE_PARTS", 8)
+    monkeypatch.setattr(seg, "refine_batches",
+                        lambda parent, parts, targets: [parts[: len(parts) // 2], parts[len(parts) // 2:]])
+    oracle = Oracle(monkeypatch=monkeypatch, gt=gt, ids=["sky", "hills", "blossoms"], flag_uncertain=True)
+    second = RuntimeError("second batch down") if fail_second else oracle
+    llm = FakeLlm([_pink_analysis(), oracle, oracle, second])
+    ctx = FakeContext(config={"workspace_dir": str(tmp_path / "ws")}, llm=llm)
+    plugin.register(ctx)
+    pid = call(ctx, "papercraft_analyze", {"image_path": str(path)})["data"]["project_id"]
+    res = call(ctx, "papercraft_segment", {"project_id": pid})
+    assert res["ok"], res
+    pdir = tmp_path / "ws" / pid
+    refine_calls = [c for c in llm.calls if c["purpose"] == "papercraft.segment.refine"]
+    assert len(refine_calls) == 2 and "batch 1 of 2" in refine_calls[0]["instructions"]
+    assert "batch 2 of 2" in refine_calls[1]["instructions"]
+    assert res["data"]["labelling"]["refineBatches"] == 2
+    assert (pdir / "review" / "refine_marks.png").is_file() and (pdir / "review" / "refine_marks_2.png").is_file()
+    owner = np.asarray(Image.open(pdir / "segmentation" / "owner.png")).astype(int)
+    if fail_second:
+        assert any("batch 2 of 2" in w for w in res["warnings"])
+    else:
+        assert (pdir / "logs" / "segment_labels_refine2.txt").is_file()
+        assert _iou(owner == 2, gt == 2) > 0.9

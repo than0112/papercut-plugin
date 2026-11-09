@@ -26,10 +26,13 @@ model.** Two steps hand you an image and wait for your answer.
      foreground blossoms. Those regions come back split into smaller parts. Label the parts and
      submit again. The plugin may add regions of its own to that second round when their colours
      match neighbours of another layer, so a second round can come even if you flagged nothing.
+     It may arrive in several batches ("batch 1 of 3"); each shows different regions and is
+     numbered from 1 again. Submit each batch, until the final result arrives.
    - Small numbers are easy to miss, so check the numbers along edges and in corners.
    - A soft dark band beside a paper edge is a cast shadow. It belongs to the paper it falls on.
 
-   The final result includes an overlay with one colour per layer. Look at it. If something is
+   The final result includes the layer colours over the art and a solid layer map. Look at both, and
+   use the solid map to tell layers apart. If something is
    in the wrong layer, tell the user, and offer `papercraft_segment_correct` with a mask that you
    or the user paint.
 4. **Build.** Call `papercraft_build_scene`. Its result explains the camera and parallax limits

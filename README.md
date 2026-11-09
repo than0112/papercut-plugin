@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.9.0.** All six tools work end to end, in Hermes and as a Claude Code plugin.
+> **Status: v0.9.1.** All six tools work end to end, in Hermes and as a Claude Code plugin.
 > Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
 > [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
 
@@ -131,7 +131,7 @@ Both hosts finish the build step by returning the exact preview command for your
 | Hermes: `model_unavailable` | Configure a vision-capable model in Hermes |
 | Claude Code: the papercraft tools do not appear | Run `/mcp` to see the server's state. On Windows, set the Python command (step 3 of Option B) |
 | Claude Code: "needs its imaging libraries" | Let Claude run the two setup commands it shows, then call the tool again |
-| A part of the picture is in the wrong layer | Look at `review/overlay.png`, paint a mask, and correct it with `manual_masks` (Hermes) or `papercraft_segment_correct` (Claude Code) |
+| A part of the picture is in the wrong layer | Look at `review/overlay.png` and `review/layer_map.png`, paint a mask, and correct it with `manual_masks` (Hermes) or `papercraft_segment_correct` (Claude Code) |
 
 ## How it works
 
@@ -381,7 +381,11 @@ The agent turns the request into JSON Patch operations, and `papercraft_update_s
    plugin also checks every labelled region itself. It splits the region into
    two colour groups. If one group matches an adjacent region of *another* layer
    much better than anything of its own layer, the region joins the second round
-   (up to 3 extra regions; `labelling.autoFlagged` lists them). Lightness counts
+   (up to 3 extra regions; `labelling.autoFlagged` lists them).
+   **Batches:** the second round is sent in batches of at most 36 numbered parts
+   (`review/refine_marks.png`, `refine_marks_2.png`, …), each region's parts
+   together, so the numbers stay readable. A failed batch keeps the first-round
+   labels for its regions only. Lightness counts
    for half, so a cast shadow (a darker shade of the same paper) is not mistaken
    for another layer. With perfect labels on the synthetic fixture it flags
    nothing; on the real village image it caught the blossom-and-sky region the
@@ -395,7 +399,8 @@ The agent turns the request into JSON Patch operations, and `papercraft_update_s
    from the layer's own pixels, skipping the cast-shadow band. Owned pixels are
    never changed. `fill.marginPx` tells the scene builder how far layers may
    shift relative to each other before an unfilled gap could show.
-5. **Review and correct.** `review/overlay.png` (colour-coded layers) and
+5. **Review and correct.** `review/overlay.png` (colour-coded layers over the art),
+   `review/layer_map.png` (the same layers as solid colours, unambiguous) and
    `review/marks.png` (what the model saw) are written. To fix a layer, paint a
    mask and call `papercraft_segment` again with `manual_masks`. The previous
    ownership is reused without calling the model again, and the layer is

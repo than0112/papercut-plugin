@@ -114,7 +114,7 @@ def test_full_flow_with_claude_as_the_model(client, fixture_dir, tmp_path):
     n = int(texts[1].split("all numbers from 1 to ")[1].split(".")[0])
     labels = _oracle_labels(fixture_dir, n)
     err, texts, images = client.call("papercraft_segment_submit", {"project_id": pid, "assignments": labels})
-    assert not err and texts[0]["ok"] and len(images) == 1, texts
+    assert not err and texts[0]["ok"] and len(images) == 2, texts  # overlay + solid layer map
     assert [l["id"] for l in texts[0]["data"]["layers"]] == LAYER_IDS
     assert _decode(images[0]).size[0] <= 1280
 

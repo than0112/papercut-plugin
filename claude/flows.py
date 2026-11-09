@@ -19,6 +19,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -244,8 +245,10 @@ def _run_segment(project: Project, state: dict) -> list[dict]:
         refine = need.purpose.endswith("refine")
         first = need.purpose.endswith("labels") and not answers
         if refine:
-            steps = ("Second round: the regions you marked uncertain, plus any whose colours match neighbours of a different "
-                     "layer, were split into smaller parts. In the image below "
+            batch = re.search(r"\(batch (\d+) of (\d+);", need.instructions)
+            which = f" (batch {batch[1]} of {batch[2]}; each batch shows different regions)" if batch else ""
+            steps = (f"Second round{which}: the regions you marked uncertain, plus any whose colours match neighbours of "
+                     "a different layer, were split into smaller parts. In the image below "
                      "everything else is darkened. Label every bright numbered part and call papercraft_segment_submit "
                      f"again with project_id=\"{project.id}\".")
             images = [need.images[-1]]
@@ -270,12 +273,19 @@ def _run_segment(project: Project, state: dict) -> list[dict]:
     set_stage(project, "segment", "succeeded", mode="layered")
     state.pop("segment", None)
     save_state(project, state)
-    overlay = project.path("review/overlay.png").read_bytes()
     return [text({"ok": True, "pluginVersion": VERSION, "data": t_segment._summary(project, manifest),
                   "warnings": manifest["warnings"],
-                  "next": "Check the overlay below (each colour is one layer). If a region is in the wrong layer, "
-                          "fix it with papercraft_segment_correct; otherwise call papercraft_build_scene."}),
-            image(overlay, "image/png", max_side=1280)]
+                  "next": "Check the two images below: the layer colours over the art, and the same layers as solid "
+                          "colours (use this one to tell layers apart; tinted art can shift a colour). If a region is in "
+                          "the wrong layer, fix it with papercraft_segment_correct; otherwise call papercraft_build_scene."})
+            ] + _review_images(project)
+
+
+def _review_images(project: Project) -> list[dict]:
+    out = [image(project.path("review/overlay.png").read_bytes(), "image/png", max_side=1280)]
+    if project.exists("review/layer_map.png"):
+        out.append(image(project.path("review/layer_map.png").read_bytes(), "image/png", max_side=1280))
+    return out
 
 
 def segment_correct(args: dict) -> list[dict]:
@@ -285,7 +295,7 @@ def segment_correct(args: dict) -> list[dict]:
     res = json.loads(t_segment.handle({"project_id": project.id, "manual_masks": args.get("manual_masks")}, runtime()))
     content = [text(res)]
     if res.get("ok"):
-        content.append(image(project.path("review/overlay.png").read_bytes(), "image/png", max_side=1280))
+        content += _review_images(project)
     return content
 
 
