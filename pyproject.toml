@@ -1,6 +1,6 @@
 [project]
 name = "papercraft-3d"
-version = "0.9.2"
+version = "0.9.3"
 description = "Hermes Agent plugin: AI paper-cut image to interactive Three.js 2.5D scene, with synced design spec."
 readme = "README.md"
 license = "MIT"

@@ -76,11 +76,11 @@ flowchart LR
 Every tool returns a JSON envelope:
 
 ```json
-{"ok": true, "tool": "papercraft_segment", "pluginVersion": "0.9.2", "data": {}, "warnings": []}
+{"ok": true, "tool": "papercraft_segment", "pluginVersion": "0.9.3", "data": {}, "warnings": []}
 ```
 
 ```json
-{"ok": false, "tool": "papercraft_segment", "pluginVersion": "0.9.2",
+{"ok": false, "tool": "papercraft_segment", "pluginVersion": "0.9.3",
  "error": {"code": "segmentation_failed", "message": "...", "retryable": true, "details": {}}}
 ```
 
@@ -186,7 +186,9 @@ always check `review/layer_map.png`.
   colour glow. The box itself never glows. The hottest part of a light is usually drawn nearly white, so
   very bright pixels tinted towards the emitter's hue also glow when they connect to that colour, and a
   white centre fully enclosed by glow is filled in. Untinted white paper next to a lamp stays dark.
-  `emissiveScale` makes lights brighter at night.
+  The glow falls off with distance from the emitter's brightest pixels. Where paper of the emitter's
+  colour carries on past the box, it also fades out towards that box edge. Otherwise the sun's rays
+  would show the box as a glowing rectangle. `emissiveScale` makes lights brighter at night.
 
 ## Design spec
 

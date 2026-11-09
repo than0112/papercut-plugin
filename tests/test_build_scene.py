@@ -178,3 +178,22 @@ def test_grey_emitter_hot_core():
     maps, _, report, _ = sb.emissive_maps(img, {"sky": np.ones((60, 60), bool)}, [moon])
     glow = maps["sky"].max(axis=-1) > 8
     assert glow[12:48, 12:48].all() and not glow[:5].any()
+
+
+def test_glow_fades_where_the_box_cuts_through_matching_paper():
+    """Sun rays of the sun's colour run past the emitter box: no hard rectangular glow edge there."""
+    img = np.zeros((100, 200, 3), np.uint8)
+    img[:] = (90, 60, 140)                                       # purple sky
+    img[:, 40:160] = (245, 200, 80)                              # a broad band of ray colour crossing the box
+    yy, xx = np.ogrid[:100, :200]
+    img[(yy - 60) ** 2 + (xx - 100) ** 2 <= 25 ** 2] = (250, 225, 110)   # the sun disc
+    sun = {"name": "sun", "kind": "sun", "layerId": "sky", "bbox": [0.3, 0.2, 0.7, 1.0], "color": "#f5c850"}
+    maps, _, _, _ = sb.emissive_maps(img, {"sky": np.ones((100, 200), bool)}, [sun])
+    lum = maps["sky"].max(axis=-1).astype(float)
+    assert lum[60, 100] > 200, "the disc itself glows fully"
+    assert lum[60, 61] < 0.25 * lum[60, 100], "the glow fades out at the box edge the rays cross"
+    assert lum[25, 100] < 0.5 * lum[60, 100], "and at the top edge"
+
+    lamp_img, owners, lamp = _lamp_scene()   # a lamp that ends inside its box is not dimmed
+    maps, _, _, _ = sb.emissive_maps(lamp_img, owners, [lamp])
+    assert (maps["lamp"].max(axis=-1)[25:75, 25:75] > 100).all()

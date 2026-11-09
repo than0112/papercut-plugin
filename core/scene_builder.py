@@ -47,6 +47,8 @@ EMITTER_HOT_L = 85.0
 EMITTER_HOT_TINT = 6.0  # Lab chroma along the emitter's hue direction
 # Share of its box an emitter may light before the glow map is flagged for review. A disc or a
 # paper lantern fills ~79% of a tight box; a tightly boxed window is mostly glass between bars.
+CORE_FADE = 0.3  # glow reaches this share of the box size from the brightest pixels (full for the first half)
+EDGE_FADE = 0.15  # fade-out width at box edges that cut through matching paper, as a share of the box size
 FILL_WARNING = {"sun": 0.9, "moon": 0.9, "lantern": 0.9, "lamp": 0.9, "window": 0.8}
 DAY_EMISSIVE = 0.6
 NIGHT_EMISSIVE = 1.8
@@ -200,6 +202,8 @@ def emissive_maps(source_rgb: np.ndarray, owners: dict[str, np.ndarray], emitter
             continue
         # Soft edge for anti-aliasing, confined to 2 px around the glowing pixels.
         soft = ndi.gaussian_filter(glow.astype(np.float32), 1.0) * ndi.binary_dilation(glow, iterations=2)
+        soft *= _box_edge_fade(lab, target, owners[layer], box, (bx0, by0, bx1, by1))
+        soft *= _core_fade(lab[..., 0], glow, (bx0, by0, bx1, by1))
         rgb = (source_rgb.astype(np.float32) * soft[..., None]).clip(0, 255)
         maps[layer] = np.maximum(maps.get(layer, np.zeros_like(rgb)), rgb)
         intensity[layer] = max(intensity.get(layer, 0.0), float(emitter.get("intensity", 0.6)))
@@ -209,6 +213,46 @@ def emissive_maps(source_rgb: np.ndarray, owners: dict[str, np.ndarray], emitter
         report.append({"name": emitter["name"], "layer": layer, "pixels": pixels, "boxFraction": round(fraction, 3),
                        "layerFraction": round(pixels / owned_px, 3) if owned_px else 0.0, "hotCorePixels": hot_px})
     return {k: v.astype(np.uint8) for k, v in maps.items()}, intensity, report, warnings
+
+
+def _box_edge_fade(lab: np.ndarray, target: np.ndarray, owner: np.ndarray, box: np.ndarray,
+                   bounds: tuple[int, int, int, int]) -> np.ndarray | float:
+    """Fade the glow towards box edges that cut through matching paper (the sun's rays, a long window band).
+
+    The bbox only limits the search, so a matching surface that continues past it would end in a hard,
+    rectangular glow edge. Where the matching colour carries on just outside the box, the glow fades
+    out over EDGE_FADE of the box size instead. An emitter that ends inside its box is not touched.
+    """
+    bx0, by0, bx1, by1 = bounds
+    width = max(3, int(round(EDGE_FADE * min(bx1 - bx0, by1 - by0))))
+    h, w = owner.shape
+    y0, y1, x0, x1 = max(0, by0 - width), min(h, by1 + width), max(0, bx0 - width), min(w, bx1 + width)
+    sub = (slice(y0, y1), slice(x0, x1))
+    near = np.linalg.norm(lab[sub] - target, axis=-1) < EMITTER_LAB_DISTANCE
+    outside = near & (lab[sub][..., 0] > EMITTER_MIN_L) & owner[sub] & ~box[sub]
+    if not outside.any():
+        return 1.0
+    fade = np.ones(owner.shape, np.float32)
+    fade[sub] = np.clip(ndi.distance_transform_edt(~outside) / width, 0.0, 1.0)
+    return fade
+
+
+def _core_fade(lightness: np.ndarray, glow: np.ndarray, bounds: tuple[int, int, int, int]) -> np.ndarray | float:
+    """Light falls off with distance from the emitter's brightest pixels.
+
+    Paper of the emitter's colour next to it (the sun's rays) matches too, so without this every matching
+    piece inside the box glows evenly and the box's outline shows. Full strength within half of
+    CORE_FADE of the box size from the brightest 30% of the glow, then a linear fade to zero. A lantern
+    or a window is its own bright core, so it keeps its full glow.
+    """
+    if not glow.any():
+        return 1.0
+    bx0, by0, bx1, by1 = bounds
+    reach = max(4.0, CORE_FADE * min(bx1 - bx0, by1 - by0))
+    cut = np.percentile(lightness[glow], 70)
+    core = glow & (lightness >= cut)
+    distance = ndi.distance_transform_edt(~core)
+    return np.clip((reach - distance) / (reach / 2), 0.0, 1.0).astype(np.float32)
 
 
 def _hot_core(lab: np.ndarray, target: np.ndarray) -> np.ndarray:

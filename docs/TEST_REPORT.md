@@ -1,11 +1,11 @@
-# Test report: PaperCraft 3D v0.9.2
+# Test report: PaperCraft 3D v0.9.3
 
 The automated results below were produced in the development container
 (Python 3.13, Node 22), last on 2026-11-09. Section 3 covers the Claude Code host on real images,
 and section 4 lists what has and has not been run in a real Hermes install. Fill in the remaining rows with
 [HERMES_TEST_PLAN.md](HERMES_TEST_PLAN.md).
 
-## 1. Automated tests: 176 passed, 0 failed
+## 1. Automated tests: 177 passed, 0 failed
 
 ```bash
 .venv/bin/python -m pytest tests
@@ -18,7 +18,7 @@ and section 4 lists what has and has not been run in a real Hermes install. Fill
 | `test_scene.py` | 18 | The scene, analysis and layers JSON Schemas; path-traversal and URL assets rejected; semantic rules |
 | `test_analyze.py` | 19 | The `ctx.llm` contract (json_mode, no provider/model override), repair round, honest failure, retry by `project_id`, pixel palette check, emitters, the recorded **real model reply** |
 | `test_segment.py` | 26 | Oracle-labelled pipeline accuracy (pixel accuracy above 96%, every layer IoU above 0.88 at 480×320), **restacking the layers reproduces the source exactly**, fill, the second labelling round (blossom IoU below 0.6 without it, above 0.9 with it, **also when the model flags nothing and the colour check sends the regions**), the colour check flags nothing on pure regions, the second round in batches (each region kept whole, priority order kept, a failed batch keeps only its own regions' first-round labels), splitting merged regions of clearly different colours (and not a smooth gradient), manual masks, preview fallback, HTTP backend |
-| `test_build_scene.py` | 13 | **Tilt and parallax shifts recomputed from scene.json stay within the fill margin**, light direction, glow only inside the emitter box, a lamp's white-hot centre glows while white paper beside it does not, camera note, history, perspective, preview scenes |
+| `test_build_scene.py` | 14 | **Tilt and parallax shifts recomputed from scene.json stay within the fill margin**, light direction, glow only inside the emitter box, a lamp's white-hot centre glows while white paper beside it does not, no rectangular glow where the box cuts through paper of the emitter's colour, camera note, history, perspective, preview scenes |
 | `test_generate_plan.py` | 7 | The spec's tables parsed back and compared with scene.json, fingerprint and staleness, user notes kept, tampering detected, zh-TW and en |
 | `test_update_scene.py` | 22 | The test-plan request "night, cold moonlight, lower ambient", asset hashes unchanged, protected paths refused with nothing written, atomicity, rebalancing, revert, dry run |
 | `test_export.py` | 4 | A standalone file set, no absolute paths (scanner tested), zip equal to the folder, re-export cleanup |
