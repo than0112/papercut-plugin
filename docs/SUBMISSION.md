@@ -98,6 +98,11 @@ edit, say: "把場景改成夜間，使用冷色月光，降低環境亮度". Ex
     image (the plugin version at the time used the v1 prompt).
   - The later stages are still to be run in Hermes. They were exercised end to
     end on the same real image, with the model replies supplied by hand.
+- As a Claude Code plugin, with Claude as the vision model:
+  - Every stage ran end to end on three real images: a lighthouse harbour, a
+    Japanese village and a night forest. Claude also ran the setup and an edit,
+    and corrected a layer with a mask on its own.
+  - The analyses and labels from these runs are recorded as regression tests.
 
 ## Known limitations
 

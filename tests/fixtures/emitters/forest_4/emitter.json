@@ -1,0 +1,17 @@
+{
+ "case": "forest",
+ "emitter": {
+  "name": "鈴蘭花燈（下）",
+  "kind": "lamp",
+  "layerId": "glow_plants",
+  "bbox": [
+   0.0588,
+   0.06,
+   0.9412,
+   0.94
+  ],
+  "color": "#f5d9a0",
+  "intensity": 0.75,
+  "confidence": 0.8
+ }
+}

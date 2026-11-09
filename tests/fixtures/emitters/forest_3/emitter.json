@@ -1,0 +1,17 @@
+{
+ "case": "forest",
+ "emitter": {
+  "name": "橋左燈柱燈籠",
+  "kind": "lantern",
+  "layerId": "bridge_river",
+  "bbox": [
+   0.1176,
+   0.087,
+   0.8824,
+   0.913
+  ],
+  "color": "#f7c862",
+  "intensity": 0.8,
+  "confidence": 0.9
+ }
+}

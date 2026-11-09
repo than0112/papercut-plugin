@@ -1,0 +1,698 @@
+{
+ "_source": "Real reply recorded from Claude through the Claude Code plugin (prompt analysis-v2, plugin 0.8.0, 2026-11-09, 1672x941 source). Plugin-owned meta/measured removed. The image itself is not stored; 'labels' are the Set-of-Mark answers as sent.",
+ "image": {
+  "width": 1672,
+  "height": 941
+ },
+ "reply": {
+  "schemaVersion": "1.0",
+  "subject": "夜晚的奇幻森林紙雕：滿月與雪山下，一間亮著暖黃窗光的石屋小木屋，旁邊有亮燈的石拱橋與溪流，前景是紫色百合、蕨葉、發光鈴蘭花燈與紅色毒蠅傘蘑菇，兩側紫色大樹與樹葉形成畫框。",
+  "style": {
+   "description": "多層紙雕／剪紙風格，紙張有明顯纖維紋理與厚度陰影，以紫、靛藍、青綠為主的冷色夜景，搭配暖黃燈光點綴。",
+   "keywords": [
+    "紙雕",
+    "剪紙",
+    "夜景",
+    "奇幻森林",
+    "小木屋",
+    "滿月",
+    "發光蘑菇",
+    "層次感"
+   ]
+  },
+  "palette": [
+   {
+    "hex": "#5057b4",
+    "name": "靛紫夜空",
+    "role": "dominant",
+    "share": 0.146
+   },
+   {
+    "hex": "#26346c",
+    "name": "深靛藍",
+    "role": "shadow",
+    "share": 0.122
+   },
+   {
+    "hex": "#6e4770",
+    "name": "紫褐樹幹",
+    "role": "secondary",
+    "share": 0.103
+   },
+   {
+    "hex": "#1c2136",
+    "name": "墨藍陰影",
+    "role": "shadow",
+    "share": 0.098
+   },
+   {
+    "hex": "#41649b",
+    "name": "霧藍山林",
+    "role": "background",
+    "share": 0.091
+   },
+   {
+    "hex": "#3e6274",
+    "name": "青灰松樹",
+    "role": "secondary",
+    "share": 0.089
+   },
+   {
+    "hex": "#8e87d3",
+    "name": "薰衣草紫",
+    "role": "secondary",
+    "share": 0.088
+   },
+   {
+    "hex": "#9d6ed5",
+    "name": "百合紫",
+    "role": "accent",
+    "share": 0.071
+   },
+   {
+    "hex": "#729281",
+    "name": "蕨葉綠",
+    "role": "secondary",
+    "share": 0.058
+   },
+   {
+    "hex": "#baa8ca",
+    "name": "淡紫高光",
+    "role": "highlight",
+    "share": 0.05
+   },
+   {
+    "hex": "#ad6676",
+    "name": "蘑菇玫紅",
+    "role": "accent",
+    "share": 0.048
+   },
+   {
+    "hex": "#e9c69d",
+    "name": "月光暖黃",
+    "role": "highlight",
+    "share": 0.035
+   }
+  ],
+  "light": {
+   "azimuthDeg": 35,
+   "elevationDeg": 40,
+   "colorTemperatureK": 7500,
+   "softness": 0.7,
+   "shadowNotes": "整體為冷色月光，主光大致來自右上方滿月方向；紙層之間有柔和的深色投影。屋窗、燈籠、鈴蘭花燈為局部暖色光源。",
+   "confidence": 0.5,
+   "emitters": [
+    {
+     "name": "滿月",
+     "kind": "moon",
+     "layerId": "sky",
+     "bbox": [
+      0.626,
+      0.067,
+      0.723,
+      0.235
+     ],
+     "color": "#f3e6b8",
+     "intensity": 1,
+     "confidence": 0.95
+    },
+    {
+     "name": "小屋閣樓圓窗",
+     "kind": "window",
+     "layerId": "cottage",
+     "bbox": [
+      0.352,
+      0.307,
+      0.381,
+      0.361
+     ],
+     "color": "#f2b84f",
+     "intensity": 0.8,
+     "confidence": 0.9
+    },
+    {
+     "name": "小屋左側拱窗",
+     "kind": "window",
+     "layerId": "cottage",
+     "bbox": [
+      0.241,
+      0.417,
+      0.281,
+      0.492
+     ],
+     "color": "#f2b84f",
+     "intensity": 0.85,
+     "confidence": 0.9
+    },
+    {
+     "name": "小屋木門窗格",
+     "kind": "window",
+     "layerId": "cottage",
+     "bbox": [
+      0.345,
+      0.434,
+      0.368,
+      0.486
+     ],
+     "color": "#f2b84f",
+     "intensity": 0.7,
+     "confidence": 0.85
+    },
+    {
+     "name": "門邊壁燈",
+     "kind": "lantern",
+     "layerId": "cottage",
+     "bbox": [
+      0.389,
+      0.422,
+      0.409,
+      0.475
+     ],
+     "color": "#f7c862",
+     "intensity": 0.8,
+     "confidence": 0.85
+    },
+    {
+     "name": "橋左燈柱燈籠",
+     "kind": "lantern",
+     "layerId": "bridge_river",
+     "bbox": [
+      0.563,
+      0.472,
+      0.586,
+      0.532
+     ],
+     "color": "#f7c862",
+     "intensity": 0.8,
+     "confidence": 0.9
+    },
+    {
+     "name": "橋右燈柱燈籠",
+     "kind": "lantern",
+     "layerId": "bridge_river",
+     "bbox": [
+      0.736,
+      0.472,
+      0.758,
+      0.53
+     ],
+     "color": "#f7c862",
+     "intensity": 0.8,
+     "confidence": 0.9
+    },
+    {
+     "name": "鈴蘭花燈（上左）",
+     "kind": "lamp",
+     "layerId": "glow_plants",
+     "bbox": [
+      0.133,
+      0.353,
+      0.169,
+      0.417
+     ],
+     "color": "#f5d9a0",
+     "intensity": 0.7,
+     "confidence": 0.8
+    },
+    {
+     "name": "鈴蘭花燈（上右）",
+     "kind": "lamp",
+     "layerId": "glow_plants",
+     "bbox": [
+      0.173,
+      0.353,
+      0.231,
+      0.451
+     ],
+     "color": "#f5d9a0",
+     "intensity": 0.75,
+     "confidence": 0.8
+    },
+    {
+     "name": "鈴蘭花燈（下）",
+     "kind": "lamp",
+     "layerId": "glow_plants",
+     "bbox": [
+      0.107,
+      0.451,
+      0.16,
+      0.544
+     ],
+     "color": "#f5d9a0",
+     "intensity": 0.75,
+     "confidence": 0.8
+    },
+    {
+     "name": "右側大蘑菇（菌柄與菌褶微光）",
+     "kind": "glow",
+     "layerId": "glow_plants",
+     "bbox": [
+      0.814,
+      0.527,
+      0.993,
+      0.787
+     ],
+     "color": "#f0c9a0",
+     "intensity": 0.45,
+     "confidence": 0.5
+    },
+    {
+     "name": "小屋旁小蘑菇",
+     "kind": "glow",
+     "layerId": "cottage",
+     "bbox": [
+      0.443,
+      0.484,
+      0.488,
+      0.561
+     ],
+     "color": "#f0c9a0",
+     "intensity": 0.35,
+     "confidence": 0.4
+    },
+    {
+     "name": "溪面月光倒影",
+     "kind": "glow",
+     "layerId": "bridge_river",
+     "bbox": [
+      0.625,
+      0.648,
+      0.69,
+      0.88
+     ],
+     "color": "#e9c69d",
+     "intensity": 0.4,
+     "confidence": 0.45
+    }
+   ]
+  },
+  "camera": {
+   "type": "orthographic",
+   "reason": "原圖為正面平視的紙雕構圖，正交相機能保留原始取景與比例。",
+   "maxTiltDeg": 12
+  },
+  "layers": [
+   {
+    "id": "sky",
+    "name": "夜空與遠山",
+    "role": "sky",
+    "order": 0,
+    "description": "最遠的背景：靛紫色夜空、右上方的淡黃滿月、紫色雲朵、星星，以及畫面中央偏右的雪頂遠山（紫白色山峰）。",
+    "bbox": [
+     0.12,
+     0,
+     0.88,
+     0.42
+    ],
+    "depthEstimate": 0,
+    "confidence": 0.85
+   },
+   {
+    "id": "far_forest",
+    "name": "遠景山丘與松林",
+    "role": "background",
+    "description": "雪山前方的霧藍色山丘與一排排小型深藍綠色遠景松樹剪影，位於橋後方與小屋後方的地平線一帶，也包括右側遠方的小松樹。",
+    "order": 1,
+    "bbox": [
+     0.15,
+     0.12,
+     0.92,
+     0.6
+    ],
+    "depthEstimate": 0.15,
+    "occludes": [
+     "sky"
+    ],
+    "confidence": 0.7
+   },
+   {
+    "id": "mid_pines",
+    "name": "中景大松樹",
+    "role": "midground",
+    "order": 2,
+    "description": "較大的青灰綠色松樹：小屋左後方與屋頂右側的深色松樹、中間橋上方的松樹，以及右側大棵青綠色松樹群（畫面右上 0.75–0.95 間）。",
+    "bbox": [
+     0.12,
+     0.08,
+     0.95,
+     0.58
+    ],
+    "depthEstimate": 0.3,
+    "occludes": [
+     "sky",
+     "far_forest"
+    ],
+    "confidence": 0.6
+   },
+   {
+    "id": "cottage",
+    "name": "石屋小木屋與庭院",
+    "role": "midground",
+    "order": 3,
+    "description": "左中位置的石牆小屋：紫色瓦片屋頂、石砌煙囪與白色煙霧、亮黃的圓窗、拱窗與木門、門邊壁燈、牆上常春藤、窗台花箱、屋前石階小徑與草地、紫色花叢，以及小屋右側兩朵紅白小蘑菇。",
+    "bbox": [
+     0.2,
+     0.1,
+     0.56,
+     0.72
+    ],
+    "depthEstimate": 0.45,
+    "occludes": [
+     "far_forest",
+     "mid_pines"
+    ],
+    "confidence": 0.75
+   },
+   {
+    "id": "bridge_river",
+    "name": "石拱橋與溪流",
+    "role": "midground",
+    "order": 4,
+    "description": "中右方的石拱橋（木欄杆、兩盞亮著的燈柱燈籠）、橋下流向觀者的藍色溪流、月光倒影、小瀑布、溪中與溪岸的灰紫色石頭，以及溪邊的草地與白色小花。",
+    "bbox": [
+     0.4,
+     0.46,
+     0.85,
+     1
+    ],
+    "depthEstimate": 0.55,
+    "occludes": [
+     "far_forest",
+     "mid_pines"
+    ],
+    "confidence": 0.7
+   },
+   {
+    "id": "frame_trees",
+    "name": "框景大樹與樹冠",
+    "role": "foreground",
+    "order": 5,
+    "description": "左右兩側粗大的紫褐色樹幹（左側樹幹與枝枒延伸到屋頂上方、右側樹幹彎向畫面右上）以及畫面頂端一整排紫色、藍綠色的大片樹葉樹冠。",
+    "bbox": [
+     0,
+     0,
+     1,
+     0.62
+    ],
+    "depthEstimate": 0.68,
+    "occludes": [
+     "sky",
+     "far_forest",
+     "mid_pines",
+     "cottage"
+    ],
+    "confidence": 0.7
+   },
+   {
+    "id": "glow_plants",
+    "name": "發光鈴蘭與紅蘑菇",
+    "role": "foreground",
+    "order": 6,
+    "description": "左側從彎曲花莖垂下的三朵發光淡紫鈴蘭花燈；右側的大紅白點毒蠅傘蘑菇（淺色菌柄）與下方兩朵較小紅蘑菇，以及蘑菇周圍的白色小花與綠葉。",
+    "bbox": [
+     0.06,
+     0.31,
+     1,
+     0.85
+    ],
+    "depthEstimate": 0.82,
+    "occludes": [
+     "bridge_river",
+     "frame_trees",
+     "cottage"
+    ],
+    "confidence": 0.6
+   },
+   {
+    "id": "foreground",
+    "name": "前景百合與蕨葉",
+    "role": "foreground",
+    "order": 7,
+    "description": "最靠近觀者的植物：左方大朵淡紫百合（黃色花蕊）與下方第二朵百合、左下與中下的淡綠蕨葉、左緣與底部的深紫、青綠大葉片，右下角的紫色星形花朵與紫色葉片，以及中央的紫色穗狀花（羽扇豆）。",
+    "bbox": [
+     0,
+     0.42,
+     1,
+     1
+    ],
+    "depthEstimate": 1,
+    "occludes": [
+     "glow_plants",
+     "bridge_river",
+     "frame_trees",
+     "cottage"
+    ],
+    "confidence": 0.7
+   }
+  ],
+  "reconstruction": {
+   "recommended": "2.5d",
+   "notes": "典型多層紙雕，適合以透明剪影平面堆疊成 2.5D 視差場景；小屋與蘑菇若需更立體可考慮擠出厚度，但非必要。",
+   "regions3d": [
+    "cottage",
+    "glow_plants"
+   ]
+  },
+  "confidence": {
+   "overall": 0.65,
+   "layering": 0.6,
+   "palette": 0.8,
+   "lighting": 0.5
+  },
+  "needsReview": [
+   {
+    "field": "light.emitters",
+    "reason": "使用者提到螢火蟲，但圖中看不到可辨識的螢火蟲光點；天空中的小星星不算螢火蟲，因此未列入。若有螢火蟲請指出位置。"
+   },
+   {
+    "field": "light.emitters[10]",
+    "reason": "右側大蘑菇看起來菌柄偏亮，但不確定是發光還是只是受光的淺色紙，信心較低。"
+   },
+   {
+    "field": "light.emitters[11]",
+    "reason": "小屋旁的小蘑菇是否發光不明確，信心低。"
+   },
+   {
+    "field": "light.emitters[12]",
+    "reason": "溪面暖黃色是月光倒影，不是獨立光源，列為弱光 glow。"
+   },
+   {
+    "field": "layers.mid_pines",
+    "reason": "中景松樹與遠景松林深度界線模糊，分層可能不夠乾淨。"
+   },
+   {
+    "field": "layers.foreground",
+    "reason": "中央紫色穗狀花（羽扇豆）介於橋溪與前景之間，所屬層不確定。"
+   }
+  ],
+  "warnings": [
+   "圖中未見螢火蟲，未列入 emitters。"
+  ]
+ },
+ "labels": {
+  "1": {
+   "assignments": {
+    "1": "bridge_river",
+    "2": "mid_pines",
+    "3": "mid_pines",
+    "4": "foreground",
+    "5": "frame_trees",
+    "6": "cottage",
+    "7": "frame_trees",
+    "8": "sky",
+    "9": "frame_trees",
+    "10": "bridge_river",
+    "11": "mid_pines",
+    "12": "frame_trees",
+    "13": "frame_trees",
+    "14": "sky",
+    "15": "glow_plants",
+    "16": "cottage",
+    "17": "bridge_river",
+    "18": "foreground",
+    "19": "mid_pines",
+    "20": "sky",
+    "21": "far_forest",
+    "22": "far_forest",
+    "23": "foreground",
+    "24": "foreground",
+    "25": "frame_trees",
+    "26": "glow_plants",
+    "27": "sky",
+    "28": "sky",
+    "29": "foreground",
+    "30": "foreground",
+    "31": "bridge_river",
+    "32": "foreground",
+    "33": "glow_plants",
+    "34": "mid_pines",
+    "35": "bridge_river",
+    "36": "foreground",
+    "37": "glow_plants",
+    "38": "foreground",
+    "39": "glow_plants",
+    "40": "cottage",
+    "41": "foreground",
+    "42": "foreground",
+    "43": "frame_trees",
+    "44": "foreground",
+    "45": "frame_trees",
+    "46": "foreground",
+    "47": "frame_trees",
+    "48": "bridge_river",
+    "49": "glow_plants",
+    "50": "foreground",
+    "51": "glow_plants",
+    "52": "frame_trees",
+    "53": "sky",
+    "54": "bridge_river",
+    "55": "cottage",
+    "56": "foreground",
+    "57": "foreground",
+    "58": "frame_trees",
+    "59": "foreground",
+    "60": "glow_plants",
+    "61": "frame_trees",
+    "62": "sky",
+    "63": "foreground",
+    "64": "mid_pines",
+    "65": "cottage",
+    "66": "mid_pines",
+    "67": "bridge_river",
+    "68": "bridge_river",
+    "69": "bridge_river",
+    "70": "foreground",
+    "71": "cottage",
+    "72": "cottage",
+    "73": "foreground",
+    "74": "glow_plants",
+    "75": "frame_trees",
+    "76": "cottage",
+    "77": "bridge_river",
+    "78": "frame_trees",
+    "79": "foreground",
+    "80": "foreground",
+    "81": "foreground",
+    "82": "foreground",
+    "83": "glow_plants",
+    "84": "glow_plants",
+    "85": "cottage",
+    "86": "bridge_river",
+    "87": "foreground",
+    "88": "foreground",
+    "89": "glow_plants",
+    "90": "foreground",
+    "91": "sky",
+    "92": "frame_trees",
+    "93": "frame_trees",
+    "94": "foreground",
+    "95": "cottage",
+    "96": "foreground",
+    "97": "bridge_river",
+    "98": "bridge_river",
+    "99": "cottage",
+    "100": "foreground",
+    "101": "bridge_river",
+    "102": "glow_plants",
+    "103": "bridge_river",
+    "104": "foreground",
+    "105": "bridge_river",
+    "106": "cottage",
+    "107": "frame_trees",
+    "108": "foreground",
+    "109": "foreground",
+    "110": "foreground",
+    "111": "cottage",
+    "112": "foreground",
+    "113": "foreground",
+    "114": "cottage",
+    "115": "bridge_river",
+    "116": "bridge_river",
+    "117": "bridge_river",
+    "118": "foreground",
+    "119": "foreground",
+    "120": "foreground"
+   },
+   "uncertain": [
+    2,
+    3,
+    11,
+    15,
+    21
+   ],
+   "notes": "2/3/11/21 混有遠景松林與中景松樹；15 混有鈴蘭花莖與後方樹幹。"
+  },
+  "refine": {
+   "assignments": {
+    "1": "mid_pines",
+    "2": "mid_pines",
+    "3": "mid_pines",
+    "4": "mid_pines",
+    "5": "mid_pines",
+    "6": "far_forest",
+    "7": "mid_pines",
+    "8": "cottage",
+    "9": "sky",
+    "10": "mid_pines",
+    "11": "cottage",
+    "12": "far_forest",
+    "13": "mid_pines",
+    "14": "far_forest",
+    "15": "glow_plants",
+    "16": "mid_pines",
+    "17": "cottage",
+    "18": "frame_trees",
+    "19": "mid_pines",
+    "20": "glow_plants",
+    "21": "far_forest",
+    "22": "mid_pines",
+    "23": "mid_pines",
+    "24": "glow_plants",
+    "25": "mid_pines",
+    "26": "mid_pines",
+    "27": "foreground",
+    "28": "foreground",
+    "29": "glow_plants",
+    "30": "foreground",
+    "31": "glow_plants",
+    "32": "far_forest",
+    "33": "cottage",
+    "34": "frame_trees",
+    "35": "glow_plants",
+    "36": "mid_pines",
+    "37": "mid_pines",
+    "38": "cottage",
+    "39": "glow_plants",
+    "40": "mid_pines",
+    "41": "cottage",
+    "42": "frame_trees",
+    "43": "far_forest",
+    "44": "far_forest",
+    "45": "far_forest",
+    "46": "foreground",
+    "47": "mid_pines",
+    "48": "cottage",
+    "49": "foreground",
+    "50": "glow_plants",
+    "51": "frame_trees",
+    "52": "far_forest",
+    "53": "mid_pines",
+    "54": "mid_pines",
+    "55": "mid_pines",
+    "56": "mid_pines",
+    "57": "bridge_river",
+    "58": "cottage",
+    "59": "far_forest",
+    "60": "mid_pines",
+    "61": "far_forest",
+    "62": "far_forest",
+    "63": "far_forest",
+    "64": "far_forest",
+    "65": "far_forest",
+    "66": "bridge_river"
+   },
+   "uncertain": [],
+   "notes": "原區 3 實際含小屋屋頂，已拆回 cottage；57/66 為橋燈籠。"
+  }
+ }
+}

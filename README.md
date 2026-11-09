@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.8.0.** All six tools work end to end, in Hermes and as a Claude Code plugin.
+> **Status: v0.8.1.** All six tools work end to end, in Hermes and as a Claude Code plugin.
 > Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
 > [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
 
@@ -251,7 +251,7 @@ python -m venv .venv
 .venv/bin/python -m pytest tests
 ```
 
-On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\python`. The suite (150 tests, about
+On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\python`. The suite (170 tests, about
 3 minutes) covers the following:
 
 - **Plugin contract.** Manifest and registration parity, mirroring `hermes plugins validate`.
@@ -265,6 +265,8 @@ On Windows, use `.venv\Scripts\pip` and `.venv\Scripts\python`. The suite (150 t
   rules and history, and an export free of absolute paths.
 - **Claude Code server.** The MCP handshake, the setup message when libraries are missing, and the
   two-phase begin/submit flow.
+- **Real cases.** Analysis replies and region labels recorded from Claude on three real images,
+  plus small crops of ten real lamps, lanterns, windows and moons, which pin the glow maps.
 
 The viewer is checked with `cd viewer && npm run build` (TypeScript and Vite).
 
@@ -325,8 +327,11 @@ and Markdown files inside it.
   direction and colour come from the analysed azimuth, elevation and colour
   temperature. Night is cool moonlight with a backlight.
 - **Glow.** For each analysed emitter, only pixels inside its box that are both
-  bright and close to its colour glow. The box itself never glows.
-  `emissiveScale` makes lights brighter at night.
+  bright and close to its colour glow. The box itself never glows. The hottest
+  part of a light is usually drawn nearly white, so very bright pixels tinted
+  towards the emitter's hue also glow when they connect to that colour, and a
+  white centre fully enclosed by glow is filled in. Untinted white paper next to
+  a lamp stays dark. `emissiveScale` makes lights brighter at night.
 
 ## Editing a scene in plain language
 

@@ -140,3 +140,41 @@ def test_camera_note_when_analysis_suggests_another(tmp_path, fixture_dir, monke
     assert cam["type"] == "orthographic" and "perspective" in cam["note"]
     cam = call(ctx, "papercraft_build_scene", {"project_id": pid, "camera": "perspective"})["data"]["camera"]
     assert "note" not in cam
+
+
+def _lamp_scene():
+    """A lantern: amber ring around a white-hot core, next to white paper and a detached pale blob."""
+    img = np.zeros((100, 160, 3), np.uint8)
+    img[:] = (200, 120, 150)                                   # pink sky
+    img[20:80, 20:80] = (242, 178, 70)                         # amber glass
+    img[35:65, 35:65] = (250, 252, 215)                        # white-hot core, enclosed by amber
+    img[45:55, 45:55] = (255, 255, 255)                        # pure white centre: no hue at all
+    img[20:80, 80:110] = (240, 238, 236)                       # white paper wall touching the lamp
+    img[40:55, 120:140] = (252, 250, 212)                      # pale-yellow blob, not connected to amber
+    owners = {"lamp": np.ones(img.shape[:2], bool)}
+    emitter = {"name": "lantern", "kind": "lamp", "layerId": "lamp", "bbox": [0.0, 0.0, 1.0, 1.0],
+               "color": "#f2b246", "intensity": 0.7}
+    return img, owners, emitter
+
+
+def test_emitter_hot_core_glows_but_paper_does_not():
+    img, owners, emitter = _lamp_scene()
+    maps, _, report, _ = sb.emissive_maps(img, owners, [emitter])
+    glow = maps["lamp"].max(axis=-1) > 8
+    assert glow[25:75, 25:75].all(), "amber ring and its white-hot core both glow"
+    assert not glow[25:75, 85:110].any(), "untinted white paper next to the lamp stays dark"
+    assert not glow[42:53, 122:138].any(), "a pale blob not connected to the emitter colour stays dark"
+    assert report[0]["hotCorePixels"] >= 30 * 30 - 4 * 30
+    assert 0 < report[0]["layerFraction"] == report[0]["boxFraction"] < 1
+
+
+def test_grey_emitter_hot_core():
+    """A near-white emitter (moon) has no hue: only brightness and connection decide."""
+    img = np.zeros((60, 60, 3), np.uint8)
+    img[:] = (20, 30, 60)
+    img[10:50, 10:50] = (200, 210, 225)
+    img[20:40, 20:40] = (255, 255, 255)
+    moon = {"name": "moon", "kind": "moon", "layerId": "sky", "bbox": [0, 0, 1, 1], "color": "#c8d2e1"}
+    maps, _, report, _ = sb.emissive_maps(img, {"sky": np.ones((60, 60), bool)}, [moon])
+    glow = maps["sky"].max(axis=-1) > 8
+    assert glow[12:48, 12:48].all() and not glow[:5].any()

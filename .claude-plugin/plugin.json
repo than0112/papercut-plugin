@@ -1,7 +1,7 @@
 {
   "name": "papercraft-3d",
   "displayName": "PaperCraft 3D",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Turn a paper-cut / papercraft image into a layered, interactive Three.js 2.5D scene: analysis, real per-layer cut-outs, scene.json, a matching design spec, natural-language edits and a standalone web export. Claude is the vision model.",
   "author": { "name": "than0112", "url": "https://github.com/than0112" },
   "homepage": "https://github.com/than0112/papercut-plugin#readme",

@@ -1,0 +1,17 @@
+{
+ "case": "village",
+ "emitter": {
+  "name": "左下石燈籠火窗",
+  "kind": "lantern",
+  "layerId": "foreground",
+  "bbox": [
+   0.0462,
+   0.0682,
+   0.9538,
+   0.9318
+  ],
+  "color": "#f3d58a",
+  "intensity": 0.8,
+  "confidence": 0.85
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "case": "village",
+ "emitter": {
+  "name": "右側立柱燈籠（右）",
+  "kind": "lantern",
+  "layerId": "village",
+  "bbox": [
+   0.0811,
+   0.0723,
+   0.9189,
+   0.9277
+  ],
+  "color": "#f6d27a",
+  "intensity": 0.8,
+  "confidence": 0.85
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "case": "village",
+ "emitter": {
+  "name": "右側町屋一樓窗",
+  "kind": "window",
+  "layerId": "village",
+  "bbox": [
+   0.0845,
+   0.0513,
+   0.9155,
+   0.9487
+  ],
+  "color": "#eac27a",
+  "intensity": 0.5,
+  "confidence": 0.65
+ }
+}

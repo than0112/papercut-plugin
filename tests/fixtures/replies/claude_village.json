@@ -1,0 +1,588 @@
+{
+ "_source": "Real reply recorded from Claude through the Claude Code plugin (prompt analysis-v2, plugin 0.8.0, 2026-11-09, 1672x941 source). Plugin-owned meta/measured removed. The image itself is not stored; 'labels' are the Set-of-Mark answers as sent.",
+ "image": {
+  "width": 1672,
+  "height": 941
+ },
+ "reply": {
+  "schemaVersion": "1.0",
+  "subject": "日式山村紙雕：夕陽下的富士山、瀑布、五重塔、木造町屋、紅色拱橋、溪流與滿開櫻花框景",
+  "style": {
+   "description": "多層手工和紙剪紙風格，紙張有纖維紋理，層與層之間有柔和投影，暖色夕照，櫻花作為前景框景。",
+   "keywords": [
+    "紙雕",
+    "剪紙",
+    "和紙",
+    "日式",
+    "櫻花",
+    "富士山",
+    "夕陽",
+    "分層"
+   ]
+  },
+  "palette": [
+   {
+    "hex": "#e26b75",
+    "name": "櫻粉紅",
+    "role": "dominant",
+    "share": 0.136
+   },
+   {
+    "hex": "#723122",
+    "name": "樹幹赭褐",
+    "role": "secondary",
+    "share": 0.132
+   },
+   {
+    "hex": "#9e7b73",
+    "name": "岩石灰褐",
+    "role": "secondary",
+    "share": 0.128
+   },
+   {
+    "hex": "#ef9da4",
+    "name": "淡櫻粉",
+    "role": "highlight",
+    "share": 0.103
+   },
+   {
+    "hex": "#52413b",
+    "name": "屋瓦深褐",
+    "role": "shadow",
+    "share": 0.087
+   },
+   {
+    "hex": "#c43a3a",
+    "name": "拱橋朱紅",
+    "role": "accent",
+    "share": 0.086
+   },
+   {
+    "hex": "#5b6041",
+    "name": "山林墨綠",
+    "role": "secondary",
+    "share": 0.067
+   },
+   {
+    "hex": "#e97b4a",
+    "name": "夕照橙",
+    "role": "background",
+    "share": 0.059
+   },
+   {
+    "hex": "#6a7d93",
+    "name": "遠山藍灰",
+    "role": "secondary",
+    "share": 0.056
+   },
+   {
+    "hex": "#cfc4c3",
+    "name": "雪白灰",
+    "role": "highlight",
+    "share": 0.051
+   },
+   {
+    "hex": "#92823e",
+    "name": "橄欖綠",
+    "role": "secondary",
+    "share": 0.05
+   },
+   {
+    "hex": "#e4b85f",
+    "name": "燈籠暖黃",
+    "role": "accent",
+    "share": 0.045
+   }
+  ],
+  "light": {
+   "azimuthDeg": -30,
+   "elevationDeg": 25,
+   "colorTemperatureK": 3200,
+   "softness": 0.7,
+   "shadowNotes": "夕陽位於左側偏上，紙層邊緣右下方有柔和投影，整體為暖色漫射光。",
+   "confidence": 0.55,
+   "emitters": [
+    {
+     "name": "夕陽",
+     "kind": "sun",
+     "layerId": "sky",
+     "bbox": [
+      0.27,
+      0.24,
+      0.37,
+      0.36
+     ],
+     "color": "#f6c04a",
+     "intensity": 0.9,
+     "confidence": 0.9
+    },
+    {
+     "name": "左下石燈籠火窗",
+     "kind": "lantern",
+     "layerId": "foreground",
+     "bbox": [
+      0.08,
+      0.69,
+      0.15,
+      0.77
+     ],
+     "color": "#f3d58a",
+     "intensity": 0.8,
+     "confidence": 0.85
+    },
+    {
+     "name": "左側町屋旁小燈籠",
+     "kind": "lantern",
+     "layerId": "village",
+     "bbox": [
+      0.285,
+      0.62,
+      0.305,
+      0.67
+     ],
+     "color": "#f3c86a",
+     "intensity": 0.6,
+     "confidence": 0.6
+    },
+    {
+     "name": "右側立柱燈籠（中）",
+     "kind": "lantern",
+     "layerId": "village",
+     "bbox": [
+      0.803,
+      0.565,
+      0.837,
+      0.635
+     ],
+     "color": "#f6d27a",
+     "intensity": 0.8,
+     "confidence": 0.85
+    },
+    {
+     "name": "右側立柱燈籠（右）",
+     "kind": "lantern",
+     "layerId": "village",
+     "bbox": [
+      0.945,
+      0.525,
+      0.982,
+      0.6
+     ],
+     "color": "#f6d27a",
+     "intensity": 0.8,
+     "confidence": 0.85
+    },
+    {
+     "name": "右側小燈籠",
+     "kind": "lantern",
+     "layerId": "village",
+     "bbox": [
+      0.732,
+      0.6,
+      0.752,
+      0.645
+     ],
+     "color": "#f3c86a",
+     "intensity": 0.6,
+     "confidence": 0.6
+    },
+    {
+     "name": "左側町屋上層窗",
+     "kind": "window",
+     "layerId": "village",
+     "bbox": [
+      0.215,
+      0.52,
+      0.27,
+      0.58
+     ],
+     "color": "#eac27a",
+     "intensity": 0.6,
+     "confidence": 0.75
+    },
+    {
+     "name": "左側町屋下層窗",
+     "kind": "window",
+     "layerId": "village",
+     "bbox": [
+      0.22,
+      0.625,
+      0.285,
+      0.69
+     ],
+     "color": "#eac27a",
+     "intensity": 0.6,
+     "confidence": 0.75
+    },
+    {
+     "name": "右側町屋二樓窗",
+     "kind": "window",
+     "layerId": "village",
+     "bbox": [
+      0.866,
+      0.38,
+      1,
+      0.49
+     ],
+     "color": "#eac27a",
+     "intensity": 0.6,
+     "confidence": 0.75
+    },
+    {
+     "name": "右側町屋一樓窗",
+     "kind": "window",
+     "layerId": "village",
+     "bbox": [
+      0.84,
+      0.58,
+      0.875,
+      0.69
+     ],
+     "color": "#eac27a",
+     "intensity": 0.5,
+     "confidence": 0.65
+    },
+    {
+     "name": "中央遠處小屋窗",
+     "kind": "window",
+     "layerId": "hills",
+     "bbox": [
+      0.4,
+      0.57,
+      0.44,
+      0.61
+     ],
+     "color": "#eac27a",
+     "intensity": 0.4,
+     "confidence": 0.5
+    }
+   ]
+  },
+  "camera": {
+   "type": "orthographic",
+   "reason": "保留原始構圖與正面平視框景，正交相機可避免透視變形。",
+   "maxTiltDeg": 10
+  },
+  "layers": [
+   {
+    "id": "sky",
+    "name": "夕陽天空",
+    "role": "sky",
+    "order": 0,
+    "description": "最遠層：上半部橙紅到粉紅的漸層天空、左側黃色夕陽圓盤、天空中的橙黃色雲條。不含山與櫻花。",
+    "bbox": [
+     0,
+     0,
+     1,
+     0.42
+    ],
+    "depthEstimate": 0,
+    "confidence": 0.85
+   },
+   {
+    "id": "mountains",
+    "name": "富士山與遠山",
+    "role": "background",
+    "order": 1,
+    "description": "中央白雪頂的藍灰色富士山，以及其下方左右延伸的藍灰、灰紫色遠方山脊。",
+    "bbox": [
+     0.2,
+     0.14,
+     0.85,
+     0.42
+    ],
+    "depthEstimate": 0.15,
+    "occludes": [
+     "sky"
+    ],
+    "confidence": 0.8
+   },
+   {
+    "id": "hills",
+    "name": "綠丘森林與瀑布",
+    "role": "midground",
+    "order": 2,
+    "description": "綠色丘陵與深綠松樹林、右上方紅色五重塔、中右方灰色岩壁與白藍色瀑布及其水霧、瀑布周圍黃綠灌木、中央遠處的小木屋、丘陵上較遠的粉紅櫻花樹（中央與塔下方）。",
+    "bbox": [
+     0.05,
+     0.14,
+     0.92,
+     0.75
+    ],
+    "depthEstimate": 0.32,
+    "occludes": [
+     "sky",
+     "mountains"
+    ],
+    "confidence": 0.6
+   },
+   {
+    "id": "village",
+    "name": "町屋村落與溪流",
+    "role": "midground",
+    "order": 3,
+    "description": "左側灰瓦木造町屋（亮窗、小燈籠）、右側大型灰瓦町屋群（亮窗、紅色暖簾、立柱紙燈籠、石階上方）、圍繞町屋的粉紅櫻花樹叢、以及畫面下方中央藍綠色溪流水面與水上花瓣、遠處小水流。",
+    "bbox": [
+     0.04,
+     0.3,
+     1,
+     1
+    ],
+    "depthEstimate": 0.5,
+    "occludes": [
+     "hills",
+     "mountains"
+    ],
+    "confidence": 0.55
+   },
+   {
+    "id": "bridge",
+    "name": "紅色拱橋與河石",
+    "role": "midground",
+    "order": 4,
+    "description": "中央朱紅色木造拱橋（含黑色欄柱頂）、兩端灰色石砌橋墩、橋下溪中的灰色岩石。",
+    "bbox": [
+     0.26,
+     0.6,
+     0.7,
+     0.95
+    ],
+    "depthEstimate": 0.65,
+    "occludes": [
+     "village",
+     "hills"
+    ],
+    "confidence": 0.7
+   },
+   {
+    "id": "foreground",
+    "name": "前景石燈籠與岩石",
+    "role": "foreground",
+    "order": 5,
+    "description": "左下灰色石燈籠（亮著暖黃火窗）、下方灰褐色大岩石、右下灰色石階與岩石、綠色灌木與細長草葉、左下紅色山茶花、右側低矮粉紅花叢。",
+    "bbox": [
+     0,
+     0.58,
+     1,
+     1
+    ],
+    "depthEstimate": 0.82,
+    "occludes": [
+     "village",
+     "bridge"
+    ],
+    "confidence": 0.6
+   },
+   {
+    "id": "frame",
+    "name": "櫻花樹框景",
+    "role": "foreground",
+    "order": 6,
+    "description": "最近層：左上與左側的褐色櫻花樹幹與枝條、頂部左右兩側大朵粉紅櫻花，構成畫框；右下角大朵粉紅櫻花；左側飄落的花瓣。",
+    "bbox": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "depthEstimate": 1,
+    "occludes": [
+     "sky",
+     "mountains",
+     "hills",
+     "village",
+     "foreground"
+    ],
+    "confidence": 0.7
+   }
+  ],
+  "reconstruction": {
+   "recommended": "2.5d",
+   "notes": "畫面為正面平視的分層紙雕，適合 2.5D 平面堆疊；拱橋可考慮輕微厚度但非必要。",
+   "regions3d": []
+  },
+  "confidence": {
+   "overall": 0.65,
+   "layering": 0.6,
+   "palette": 0.8,
+   "lighting": 0.55
+  },
+  "needsReview": [
+   {
+    "field": "layers.village",
+    "reason": "溪流水面放在村落層，但它在拱橋前後皆有延伸，深度關係可能不完全正確。"
+   },
+   {
+    "field": "layers.hills",
+    "reason": "中景櫻花樹與村落周圍櫻花樹深度接近，邊界可能分錯。"
+   },
+   {
+    "field": "light.azimuthDeg",
+    "reason": "主光方向由夕陽位置與微弱投影推斷，可信度中等。"
+   }
+  ]
+ },
+ "labels": {
+  "1": {
+   "assignments": {
+    "1": "hills",
+    "2": "frame",
+    "3": "frame",
+    "4": "village",
+    "5": "sky",
+    "6": "bridge",
+    "7": "sky",
+    "8": "foreground",
+    "9": "frame",
+    "10": "village",
+    "11": "hills",
+    "12": "village",
+    "13": "frame",
+    "14": "frame",
+    "15": "mountains",
+    "16": "foreground",
+    "17": "foreground",
+    "18": "mountains",
+    "19": "frame",
+    "20": "village",
+    "21": "frame",
+    "22": "bridge",
+    "23": "village",
+    "24": "hills",
+    "25": "village",
+    "26": "hills",
+    "27": "village",
+    "28": "foreground",
+    "29": "frame",
+    "30": "bridge",
+    "31": "mountains",
+    "32": "hills",
+    "33": "sky",
+    "34": "village",
+    "35": "bridge",
+    "36": "village",
+    "37": "foreground",
+    "38": "frame",
+    "39": "village",
+    "40": "hills",
+    "41": "village",
+    "42": "sky",
+    "43": "village",
+    "44": "foreground",
+    "45": "village",
+    "46": "foreground",
+    "47": "hills",
+    "48": "sky",
+    "49": "foreground",
+    "50": "foreground",
+    "51": "village",
+    "52": "frame",
+    "53": "village",
+    "54": "frame",
+    "55": "sky",
+    "56": "bridge",
+    "57": "frame",
+    "58": "village",
+    "59": "village",
+    "60": "foreground",
+    "61": "frame",
+    "62": "frame",
+    "63": "village",
+    "64": "hills",
+    "65": "bridge",
+    "66": "frame",
+    "67": "frame",
+    "68": "foreground",
+    "69": "foreground",
+    "70": "village",
+    "71": "foreground",
+    "72": "frame",
+    "73": "hills",
+    "74": "hills",
+    "75": "frame",
+    "76": "village",
+    "77": "frame",
+    "78": "village",
+    "79": "foreground",
+    "80": "bridge",
+    "81": "frame",
+    "82": "village",
+    "83": "village",
+    "84": "hills",
+    "85": "frame",
+    "86": "hills",
+    "87": "hills",
+    "88": "village",
+    "89": "foreground",
+    "90": "foreground",
+    "91": "foreground",
+    "92": "village",
+    "93": "frame",
+    "94": "hills",
+    "95": "village",
+    "96": "village",
+    "97": "foreground",
+    "98": "village",
+    "99": "bridge",
+    "100": "foreground",
+    "101": "foreground",
+    "102": "frame",
+    "103": "frame",
+    "104": "village",
+    "105": "bridge"
+   },
+   "uncertain": [
+    1,
+    7,
+    47,
+    105
+   ],
+   "notes": "1/47 混合藍灰遠山與綠丘；7 天空可能夾帶櫻花枝；105 橋欄杆間透出瀑布與背景。"
+  },
+  "refine": {
+   "assignments": {
+    "1": "hills",
+    "2": "sky",
+    "3": "hills",
+    "4": "hills",
+    "5": "hills",
+    "6": "hills",
+    "7": "hills",
+    "8": "hills",
+    "9": "frame",
+    "10": "frame",
+    "11": "sky",
+    "12": "hills",
+    "13": "hills",
+    "14": "hills",
+    "15": "frame",
+    "16": "hills",
+    "17": "village",
+    "18": "village",
+    "19": "frame",
+    "20": "mountains",
+    "21": "frame",
+    "22": "frame",
+    "23": "frame",
+    "24": "hills",
+    "25": "frame",
+    "26": "frame",
+    "27": "frame",
+    "28": "frame",
+    "29": "hills",
+    "30": "mountains",
+    "31": "hills",
+    "32": "mountains",
+    "33": "mountains",
+    "34": "mountains",
+    "35": "hills",
+    "36": "hills",
+    "37": "hills",
+    "38": "hills",
+    "39": "hills"
+   },
+   "uncertain": [],
+   "notes": ""
+  }
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "case": "village",
+ "emitter": {
+  "name": "左側町屋旁小燈籠",
+  "kind": "lantern",
+  "layerId": "village",
+  "bbox": [
+   0.1304,
+   0.1,
+   0.8696,
+   0.9
+  ],
+  "color": "#f3c86a",
+  "intensity": 0.6,
+  "confidence": 0.6
+ }
+}

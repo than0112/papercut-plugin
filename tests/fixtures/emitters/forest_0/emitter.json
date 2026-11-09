@@ -1,0 +1,17 @@
+{
+ "case": "forest",
+ "emitter": {
+  "name": "滿月",
+  "kind": "moon",
+  "layerId": "sky",
+  "bbox": [
+   0.0343,
+   0.0351,
+   0.9657,
+   0.9649
+  ],
+  "color": "#f3e6b8",
+  "intensity": 1,
+  "confidence": 0.95
+ }
+}

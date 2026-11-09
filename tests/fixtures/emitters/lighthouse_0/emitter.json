@@ -1,0 +1,17 @@
+{
+ "case": "lighthouse",
+ "emitter": {
+  "name": "燈塔燈室",
+  "kind": "lamp",
+  "layerId": "lighthouse_cliff",
+  "bbox": [
+   0.0682,
+   0.087,
+   0.9318,
+   0.913
+  ],
+  "color": "#f2c25a",
+  "intensity": 0.7,
+  "confidence": 0.75
+ }
+}

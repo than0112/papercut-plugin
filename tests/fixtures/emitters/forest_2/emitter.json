@@ -1,0 +1,17 @@
+{
+ "case": "forest",
+ "emitter": {
+  "name": "門邊壁燈",
+  "kind": "lantern",
+  "layerId": "cottage",
+  "bbox": [
+   0.1304,
+   0.0968,
+   0.8696,
+   0.9032
+  ],
+  "color": "#f7c862",
+  "intensity": 0.8,
+  "confidence": 0.85
+ }
+}

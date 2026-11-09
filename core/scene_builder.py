@@ -40,6 +40,14 @@ TOTAL_LIGHT = 3.0
 AMBIENT_SHARE = 0.55
 EMITTER_LAB_DISTANCE = 32.0
 EMITTER_MIN_L = 50.0
+# Hot cores: the brightest part of a lamp or window is drawn nearly white, too far from the
+# emitter colour to match. Such pixels glow when they are very bright, tinted towards the
+# emitter's hue (white paper is not) and connected to pixels that do match the colour.
+EMITTER_HOT_L = 85.0
+EMITTER_HOT_TINT = 6.0  # Lab chroma along the emitter's hue direction
+# Share of its box an emitter may light before the glow map is flagged for review. A disc or a
+# paper lantern fills ~79% of a tight box; a tightly boxed window is mostly glass between bars.
+FILL_WARNING = {"sun": 0.9, "moon": 0.9, "lantern": 0.9, "lamp": 0.9, "window": 0.8}
 DAY_EMISSIVE = 0.6
 NIGHT_EMISSIVE = 1.8
 
@@ -175,13 +183,20 @@ def emissive_maps(source_rgb: np.ndarray, owners: dict[str, np.ndarray], emitter
         box[by0:by1, bx0:bx1] = True
         candidate = box & owners[layer]
         dist = np.linalg.norm(lab - target, axis=-1)
-        glow = candidate & (dist < EMITTER_LAB_DISTANCE) & (lab[..., 0] > EMITTER_MIN_L)
+        seeds = candidate & (dist < EMITTER_LAB_DISTANCE) & (lab[..., 0] > EMITTER_MIN_L)
+        hot = candidate & ~seeds & _hot_core(lab, target)
+        glow = ndi.binary_propagation(seeds, mask=seeds | hot) if hot.any() else seeds
+        # A pure-white centre has no hue at all; take it when the glow fully encloses it.
+        glow |= ndi.binary_fill_holes(glow) & candidate & (lab[..., 0] >= EMITTER_HOT_L)
+        hot_px = int((glow & ~seeds).sum())
         glow = ndi.binary_opening(glow, iterations=1)  # drop single-pixel speckle
         pixels = int(glow.sum())
         box_px = int(box.sum())
+        owned_px = int(candidate.sum())
         if pixels == 0:
             warnings.append(f"emitter '{emitter['name']}' matched no pixels of its colour; no glow added")
-            report.append({"name": emitter["name"], "layer": layer, "pixels": 0, "boxFraction": 0.0})
+            report.append({"name": emitter["name"], "layer": layer, "pixels": 0, "boxFraction": 0.0,
+                           "layerFraction": 0.0, "hotCorePixels": 0})
             continue
         # Soft edge for anti-aliasing, confined to 2 px around the glowing pixels.
         soft = ndi.gaussian_filter(glow.astype(np.float32), 1.0) * ndi.binary_dilation(glow, iterations=2)
@@ -189,11 +204,23 @@ def emissive_maps(source_rgb: np.ndarray, owners: dict[str, np.ndarray], emitter
         maps[layer] = np.maximum(maps.get(layer, np.zeros_like(rgb)), rgb)
         intensity[layer] = max(intensity.get(layer, 0.0), float(emitter.get("intensity", 0.6)))
         fraction = pixels / box_px
-        disc = emitter.get("kind") in ("sun", "moon")  # a disc fills ~79% of its square box
-        if fraction > (0.9 if disc else 0.6):
+        if fraction > FILL_WARNING.get(emitter.get("kind"), 0.6):
             warnings.append(f"emitter '{emitter['name']}' glows over {fraction:.0%} of its box; check the glow map")
-        report.append({"name": emitter["name"], "layer": layer, "pixels": pixels, "boxFraction": round(fraction, 3)})
+        report.append({"name": emitter["name"], "layer": layer, "pixels": pixels, "boxFraction": round(fraction, 3),
+                       "layerFraction": round(pixels / owned_px, 3) if owned_px else 0.0, "hotCorePixels": hot_px})
     return {k: v.astype(np.uint8) for k, v in maps.items()}, intensity, report, warnings
+
+
+def _hot_core(lab: np.ndarray, target: np.ndarray) -> np.ndarray:
+    """Very bright pixels tinted towards the target hue (any bright pixel if the target is near grey)."""
+    bright = lab[..., 0] >= max(EMITTER_HOT_L, min(float(target[0]), 95.0))
+    chroma = float(np.hypot(target[1], target[2]))
+    if chroma < 10:  # a white or grey emitter (moon, cold lamp) has no hue to compare
+        return bright
+    ua, ub = target[1] / chroma, target[2] / chroma
+    along = lab[..., 1] * ua + lab[..., 2] * ub
+    across = np.abs(lab[..., 2] * ua - lab[..., 1] * ub)
+    return bright & (along >= EMITTER_HOT_TINT) & (across <= along * 1.2)
 
 
 def load_owner_masks(project_dir, layers: list[dict[str, Any]]) -> dict[str, np.ndarray]:
