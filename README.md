@@ -8,7 +8,7 @@ AI-generated **paper-cut / papercraft image** into a layered, interactive
 generated from the scene's own `scene.json`, so the two cannot disagree. You can
 then change the scene in plain language ("make it night with cold moonlight").
 
-> **Status: v0.9.1.** All six tools work end to end, in Hermes and as a Claude Code plugin.
+> **Status: v0.9.2.** All six tools work end to end, in Hermes and as a Claude Code plugin.
 > Submission material: [docs/SUBMISSION.md](docs/SUBMISSION.md),
 > [docs/TEST_REPORT.md](docs/TEST_REPORT.md), [docs/catalog/papercraft-3d.yaml](docs/catalog/papercraft-3d.yaml).
 
@@ -368,6 +368,13 @@ The agent turns the request into JSON Patch operations, and `papercraft_update_s
    regions, depending on the number of layers. A transitive threshold merge
    was dropped: on a real image it chained pink sky, blossoms, snow and rock
    into one region covering 50% of the picture.
+   On detailed art the merge must be coarse to stay within the number budget,
+   so a region can still join clearly different pieces. One real example joined
+   a white sail, the pink coast behind it and the sun's gold reflection; its one
+   number sat on the coast, so the sail was labelled as coast. Such regions are
+   split again by colour group and connectivity before the numbers are drawn.
+   The clearest cases go first, with at most 3 parts per region and at most 12
+   extra numbers.
 2. **Labels from your vision model (Set-of-Mark).** The model gets the original
    image and a copy with each region outlined and numbered, plus the layer plan
    from `analysis.json`. It answers "region 12 → `red_bridge`". The answer is

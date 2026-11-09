@@ -518,3 +518,31 @@ def test_second_round_in_batches(tmp_path, monkeypatch, fail_second):
     else:
         assert (pdir / "logs" / "segment_labels_refine2.txt").is_file()
         assert _iou(owner == 2, gt == 2) > 0.9
+
+
+def test_split_mixed_separates_clearly_different_pieces():
+    """A merged region joining a white sail and a purple coast is split; a smooth gradient is not."""
+    from skimage import color as skcolor
+
+    h, w = 60, 120
+    rgb = np.zeros((h, w, 3), np.uint8)
+    rgb[:, :60] = (150, 110, 170)                       # purple coast
+    rgb[10:50, 60:100] = (245, 245, 240)                # white sail, touching the coast
+    rgb[:, 100:] = (150, 110, 170)
+    lab = skcolor.rgb2lab(rgb)
+    labels = np.zeros((h, w), int)                      # everything merged into region 0 ...
+    labels[:10, 60:100] = 0
+    base = np.zeros((h, w), int)
+    base[10:50, 60:100] = 1                             # ... from two base segments
+    out, added = seg._split_mixed(labels, lab, base, min_area=200)
+    assert added == 1
+    sail, coast = out[30, 80], out[30, 10]
+    assert sail != coast and (out[10:50, 60:100] == sail).all() and (out[:, :60] == coast).all()
+
+    grad = np.zeros((h, w, 3), np.uint8)
+    grad[..., 0] = 230
+    grad[..., 1] = np.linspace(120, 150, w).astype(np.uint8)[None, :]
+    grad[..., 2] = 80
+    base2 = (np.arange(w)[None, :] // 30).repeat(h, 0)
+    out2, added2 = seg._split_mixed(np.zeros((h, w), int), skcolor.rgb2lab(grad), base2, min_area=200)
+    assert added2 == 0 and (out2 == 0).all()

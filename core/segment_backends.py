@@ -264,6 +264,7 @@ def run_builtin(source_path: str, layers: list[dict[str, Any]], provider: Any, *
         "regions": int(len(regions.areas)),
         "marked": n_marks,
         "mergeThreshold": regions.merge_threshold,
+        "splitRegions": int(getattr(regions, "split", 0)),
         "assignments": {str(n): layer_ids[k] for n, k in sorted(by_number.items())},
         "uncertain": sorted(uncertain),
         "refinement": refine_info,

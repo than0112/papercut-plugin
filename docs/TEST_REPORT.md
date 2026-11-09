@@ -1,11 +1,11 @@
-# Test report: PaperCraft 3D v0.9.1
+# Test report: PaperCraft 3D v0.9.2
 
 The automated results below were produced in the development container
 (Python 3.13, Node 22), last on 2026-11-09. Section 3 lists what has and has not been
 run in a real Hermes install. Fill in the remaining rows with
 [HERMES_TEST_PLAN.md](HERMES_TEST_PLAN.md).
 
-## 1. Automated tests: 175 passed, 0 failed
+## 1. Automated tests: 176 passed, 0 failed
 
 ```bash
 .venv/bin/python -m pytest tests
@@ -17,7 +17,7 @@ run in a real Hermes install. Fill in the remaining rows with
 | `test_security.py` | 25 | Path confinement including symlink escapes, id rules, image validation (format spoofing, truncation, size and pixel limits), read-only source copy |
 | `test_scene.py` | 18 | The scene, analysis and layers JSON Schemas; path-traversal and URL assets rejected; semantic rules |
 | `test_analyze.py` | 19 | The `ctx.llm` contract (json_mode, no provider/model override), repair round, honest failure, retry by `project_id`, pixel palette check, emitters, the recorded **real model reply** |
-| `test_segment.py` | 25 | Oracle-labelled pipeline accuracy (pixel accuracy above 96%, every layer IoU above 0.88 at 480×320), **restacking the layers reproduces the source exactly**, fill, the second labelling round (blossom IoU below 0.6 without it, above 0.9 with it, **also when the model flags nothing and the colour check sends the regions**), the colour check flags nothing on pure regions, the second round in batches (each region kept whole, priority order kept, a failed batch keeps only its own regions' first-round labels), manual masks, preview fallback, HTTP backend |
+| `test_segment.py` | 26 | Oracle-labelled pipeline accuracy (pixel accuracy above 96%, every layer IoU above 0.88 at 480×320), **restacking the layers reproduces the source exactly**, fill, the second labelling round (blossom IoU below 0.6 without it, above 0.9 with it, **also when the model flags nothing and the colour check sends the regions**), the colour check flags nothing on pure regions, the second round in batches (each region kept whole, priority order kept, a failed batch keeps only its own regions' first-round labels), splitting merged regions of clearly different colours (and not a smooth gradient), manual masks, preview fallback, HTTP backend |
 | `test_build_scene.py` | 13 | **Tilt and parallax shifts recomputed from scene.json stay within the fill margin**, light direction, glow only inside the emitter box, a lamp's white-hot centre glows while white paper beside it does not, camera note, history, perspective, preview scenes |
 | `test_generate_plan.py` | 7 | The spec's tables parsed back and compared with scene.json, fingerprint and staleness, user notes kept, tampering detected, zh-TW and en |
 | `test_update_scene.py` | 22 | The test-plan request "night, cold moonlight, lower ambient", asset hashes unchanged, protected paths refused with nothing written, atomicity, rebalancing, revert, dry run |
@@ -63,6 +63,20 @@ Known from these runs:
   - Claude listed the remaining errors itself: a roof and a lantern cap went into the blossom-frame layer.
 - In both re-runs, Claude drew its own solid-colour layer map. The tinted overlay can shift colours: blue over a pink sky looks like the purple bridge layer. **Since 0.9.1** the plugin writes `review/layer_map.png` and returns it next to the overlay.
 - Low-confidence glow emitters (mushrooms) also light their pale cap spots.
+- **First real Hermes segmentation (user, gpt-6.1-sol, plugin 0.9.1, lighthouse image).**
+  - The result was layered, the second round ran in 3 batches, and the colour check flagged 3 regions.
+  - The big sailboat went into the wrong layer. The first-round region holding its sail also held the distant coast and the sun's reflection on the sea, and its number sat on the coast.
+  - **Since 0.9.2**, merged regions whose pieces are clearly different colours are split before numbering. That region now gets separate numbers for the boat, the coast and the reflection.
+  - On the three real images, the share of numbered-region pixels that belong to another layer was compared with the reviewed owner maps from the earlier runs:
+
+    | Image | Before | After |
+    |---|---|---|
+    | Lighthouse | 0.019 | 0.015 |
+    | Village | 0.054 | 0.053 |
+    | Forest | 0.051 | 0.051 |
+
+  - The remaining mixes are pieces of nearly the same colour (pink blossoms against a pink sky), which colour cannot separate. They rely on the second round and the colour check.
+  - The far sailboat is smaller than the smallest numbered region, so it still takes a neighbour's layer. A manual mask fixes it.
 
 ## 4. Real Hermes (0.22.7, Windows), run by the user
 

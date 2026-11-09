@@ -54,6 +54,7 @@ class Regions:
     merge_threshold: float = 0.0  # Lab distance used to merge the base segments
     base: np.ndarray | None = None  # fine Felzenszwalb segments (before merging)
     lab: np.ndarray | None = None  # Lab work image
+    split: int = 0  # numbered regions added by splitting merged regions of clearly different colours
 
 
 @dataclass
@@ -207,11 +208,13 @@ def oversegment(work_rgb: np.ndarray, *, max_marks: int = MAX_MARKS) -> Regions:
     base = _relabel(felzenszwalb(work_rgb, scale=FZ_SCALE, sigma=0.8, min_size=FZ_MIN_SIZE))
     min_area = max(16, int(MIN_MARK_AREA * n_pixels))
     labels, max_merged = _ward_merge(lab, base, min_area=min_area, max_marks=max_marks)
+    labels, added = _split_mixed(labels, lab, base, min_area)
+    labels = _relabel(labels)
     areas = np.bincount(labels.ravel())
-    marked = [int(r) for r in np.argsort(-areas) if areas[r] >= min_area][:max_marks]
+    marked = [int(r) for r in np.argsort(-areas) if areas[r] >= min_area][:max_marks + added]
     return Regions(labels=labels, marked=marked, numbers={r: i + 1 for i, r in enumerate(marked)},
                    areas=areas, adjacency=_adjacency(labels), merge_threshold=round(max_merged, 2),
-                   base=base, lab=lab)
+                   base=base, lab=lab, split=added)
 
 
 REFINE_MAX_REGIONS = 6  # uncertain regions subdivided in the second labelling round
@@ -246,16 +249,22 @@ MIX_MATCH_LAB = 15.0  # a colour group "looks like" a neighbour within this Lab 
 MIX_GAIN_LAB = 8.0  # ... and at least this much closer than to any neighbour of the region's own layer
 MIX_MIN_SHARE = 0.15  # the foreign-looking group covers at least this share of the region
 MIX_L_WEIGHT = 0.5  # lightness counts less than hue: a cast shadow is a darker shade of the same paper
+SPLIT_LAB = 20.0  # a merged region whose two colour groups differ by this much (L at half weight) is split ...
+SPLIT_MAX_PARTS = 3  # ... into at most this many numbered parts ...
+SPLIT_MAX_EXTRA = 12  # ... adding at most this many numbers to the first round
 
 
-def _two_colour_groups(regions: Regions, r: int) -> list[tuple[np.ndarray, float]] | None:
-    """Split region ``r`` into two colour groups of its base segments (area-weighted 2-means in Lab)."""
-    mask = regions.labels == r
-    ids, inv, counts = np.unique(regions.base[mask], return_inverse=True, return_counts=True)
+def _two_means(lab_px: np.ndarray, base_px: np.ndarray):
+    """Two colour groups of the base segments under one region (area-weighted 2-means in Lab).
+
+    ``lab_px`` and ``base_px`` are the region's pixels. Returns (group per pixel, [(mean, area)] x 2) or None.
+    """
+    ids, inv, counts = np.unique(base_px, return_inverse=True, return_counts=True)
+    inv = inv.ravel()
     if len(ids) < 2:
         return None
     means = np.zeros((len(ids), 3))
-    np.add.at(means, inv.ravel(), regions.lab[mask])
+    np.add.at(means, inv, lab_px)
     means /= counts[:, None]
     weights = counts.astype(float)
     centre = np.average(means, axis=0, weights=weights)
@@ -272,7 +281,72 @@ def _two_colour_groups(regions: Regions, r: int) -> list[tuple[np.ndarray, float
         group = new
     if group.all() or not group.any():
         return None
-    return [(np.average(means[g], axis=0, weights=weights[g]), float(weights[g].sum())) for g in (~group, group)]
+    groups = [(np.average(means[g], axis=0, weights=weights[g]), float(weights[g].sum())) for g in (~group, group)]
+    return group[inv], groups
+
+
+def _two_colour_groups(regions: Regions, r: int) -> list[tuple[np.ndarray, float]] | None:
+    """Split region ``r`` into two colour groups of its base segments (area-weighted 2-means in Lab)."""
+    mask = regions.labels == r
+    result = _two_means(regions.lab[mask], regions.base[mask])
+    return result[1] if result else None
+
+
+def _split_mixed(labels: np.ndarray, lab: np.ndarray, base: np.ndarray, min_area: int) -> tuple[np.ndarray, int]:
+    """Split merged regions whose pieces are clearly different colours and each big enough for a number.
+
+    The merge has to be coarse on detailed art to stay within the number budget, so a region can join,
+    for example, a white sail, a pink coast and a gold reflection; its single number then sits on one of
+    them and the model labels all three with that one's layer. Here each such region is split by colour
+    group and connectivity into at most SPLIT_MAX_PARTS parts, the clearest cases first, adding at most
+    SPLIT_MAX_EXTRA numbered regions. Returns the new labels and the number of regions added.
+    """
+    n = int(labels.max()) + 1
+    areas = np.bincount(labels.ravel(), minlength=n)
+    weight = np.array([MIX_L_WEIGHT, 1.0, 1.0])
+    candidates = []
+    for r in np.argsort(-areas):
+        if areas[r] < 2 * min_area:
+            break
+        found = ndi.find_objects((labels == r).astype(np.int8))
+        sl = found[0]
+        m = labels[sl] == r
+        result = _two_means(lab[sl][m], base[sl][m])
+        if not result:
+            continue
+        group, ((m0, _), (m1, _)) = result
+        separation = float(np.linalg.norm((m1 - m0) * weight))
+        if separation < SPLIT_LAB:
+            continue
+        grouped = np.zeros(m.shape, np.int8)
+        grouped[m] = np.where(group, 2, 1)
+        parts = np.zeros(m.shape, np.int32)
+        count = 0
+        for value in (1, 2):
+            comp, k = ndi.label(grouped == value, structure=np.ones((3, 3), bool))
+            parts[comp > 0] = comp[comp > 0] + count
+            count += k
+        sizes = np.bincount(parts.ravel(), minlength=count + 1)
+        big = sorted((i for i in range(1, count + 1) if sizes[i] >= min_area), key=lambda i: -sizes[i])
+        big = big[:SPLIT_MAX_PARTS]
+        if len(big) < 2:
+            continue
+        seeds = np.where(np.isin(parts, big), parts, 0)  # small pieces join the nearest kept part
+        _, (iy, ix) = ndi.distance_transform_edt(seeds == 0, return_indices=True)
+        parts = np.where(m, seeds[iy, ix], 0)
+        minority = int(m.sum()) - int(sizes[big[0]])
+        candidates.append((separation * minority, sl, parts, big))
+    candidates.sort(key=lambda c: -c[0])
+    out, next_id, added = labels.copy(), n, 0
+    for _, sl, parts, big in candidates:
+        if added + len(big) - 1 > SPLIT_MAX_EXTRA:
+            continue
+        view = out[sl]
+        for part in big[1:]:
+            view[parts == part] = next_id
+            next_id += 1
+        added += len(big) - 1
+    return out, added
 
 
 def mixed_suspects(regions: Regions, assignment: dict[int, int], min_px: float) -> list[tuple[float, int]]:
